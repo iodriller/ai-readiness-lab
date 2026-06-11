@@ -1,0 +1,89 @@
+name: Release desktop installers
+
+# Builds the double-clickable app for Windows, macOS, and Linux and attaches them
+# to a GitHub Release. Trigger by pushing a version tag (e.g. v0.1.0), or run
+# manually from the Actions tab.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: ai-readiness-lab-windows
+          - os: macos-latest
+            artifact: ai-readiness-lab-macos
+          - os: ubuntu-latest
+            artifact: ai-readiness-lab-linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Linux needs GTK/WebKit for pywebview's native window at runtime.
+      - name: Install Linux webview deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-0 libwebkit2gtk-4.1-0 gir1.2-webkit2-4.1
+
+      - name: Install build deps
+        run: pip install -r backend/requirements.txt -r backend/requirements-desktop.txt
+
+      - name: Bundle with PyInstaller
+        run: pyinstaller desktop/AIReadinessLab.spec --noconfirm --clean
+
+      - name: Package (macOS .dmg)
+        if: runner.os == 'macOS'
+        run: |
+          hdiutil create -volname "AI Readiness Lab" \
+            -srcfolder "dist/AI Readiness Lab.app" \
+            -ov -format UDZO "dist/${{ matrix.artifact }}.dmg"
+
+      - name: Package (Windows .zip)
+        if: runner.os == 'Windows'
+        run: Compress-Archive -Path "dist/AI Readiness Lab/*" -DestinationPath "dist/${{ matrix.artifact }}.zip"
+
+      - name: Package (Linux .tar.gz)
+        if: runner.os == 'Linux'
+        run: tar -czf "dist/${{ matrix.artifact }}.tar.gz" -C dist "AI Readiness Lab"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.tar.gz
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.tar.gz

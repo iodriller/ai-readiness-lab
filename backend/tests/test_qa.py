@@ -53,6 +53,7 @@ def _make_project(client) -> str:
 # Classifier
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize(
     "question, expected",
     [
@@ -79,6 +80,7 @@ def test_classifier_defaults_to_opportunity_seeking():
 # ---------------------------------------------------------------------------
 # Heuristic fallback composer
 # ---------------------------------------------------------------------------
+
 
 def _make_context() -> QAContext:
     from app.models.company import CompanyIdentity, CompanyIntelligenceProfile
@@ -119,6 +121,7 @@ def test_heuristic_answer_no_invented_peers():
 # Compose with null LLM (exercises heuristic path via public API)
 # ---------------------------------------------------------------------------
 
+
 def test_compose_answer_no_llm():
     from app.qa.composer import compose_answer
 
@@ -131,6 +134,7 @@ def test_compose_answer_no_llm():
 # ---------------------------------------------------------------------------
 # API contract
 # ---------------------------------------------------------------------------
+
 
 def test_qa_endpoint_returns_structured_answer(client):
     project_id = _make_project(client)
@@ -171,6 +175,7 @@ def test_qa_history_persists_across_calls(client):
 # ---------------------------------------------------------------------------
 # Retriever — reads a real stored profile (regression: competitive_ai_signals)
 # ---------------------------------------------------------------------------
+
 
 def _session_factory():
     engine = create_engine(

@@ -7,9 +7,34 @@ practical enterprise AI pilots, scores readiness, and generates executive-ready 
 > practical AI pilots, score readiness, and turn one selected idea into a scoped, risk-aware,
 > technically grounded plan.
 
+## Download & run (no Python needed)
+
+AI Readiness Lab ships as a double-clickable desktop app — no Python, Node, or terminal required.
+
+1. Download the installer for your platform from the [latest release](../../releases/latest):
+   - **Windows** — `ai-readiness-lab-windows.zip` → unzip → run `AI Readiness Lab.exe`
+   - **macOS** — `ai-readiness-lab-macos.dmg` → open → drag to Applications → launch
+   - **Linux** — `ai-readiness-lab-linux.tar.gz` → extract → run `AI Readiness Lab`
+2. The app opens in its own window. Explore immediately with **sample data**, or click
+   **Enable live research** and paste an [Anthropic API key](https://console.anthropic.com/settings/keys)
+   to research real companies. The key is stored in your OS keychain and never leaves your machine
+   except to call Claude.
+
+Installers are built automatically for all three platforms by the
+[release workflow](.github/workflows/release.yml) (push a `v*` tag or run it manually).
+
+### Build the desktop app yourself
+
+```bash
+./scripts/build_desktop.sh      # builds the UI, bundles everything with PyInstaller
+# → dist/"AI Readiness Lab"/
+```
+
 ## Status
 
-Early stage — documentation and planning. Application scaffolding is the next step (see the plan).
+Phases 0–6 complete: executive shell, streaming research (DuckDuckGo default), peer taxonomy,
+opportunity map, and open-ended strategy Q&A — plus native desktop packaging with seamless
+in-app key setup. See the implementation plan for what's next.
 
 ## Documentation
 
