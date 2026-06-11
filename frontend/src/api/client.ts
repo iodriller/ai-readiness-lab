@@ -31,6 +31,19 @@ export interface SourceEvent {
   confidence: number
 }
 
+export interface StructuredAnswer {
+  question: string
+  question_type: string
+  direct_answer: string
+  why_it_matters: string
+  peer_signals: string[]
+  pilot_options: string[]
+  recommended_first_pilot: string
+  data_needed: string[]
+  risks_to_control: string[]
+  technical_questions: string[]
+}
+
 async function getJson<T>(path: string): Promise<T> {
   const response = await fetch(path)
   if (!response.ok) {
@@ -57,6 +70,18 @@ export async function createProject(request: CreateProjectRequest): Promise<Proj
 
 export function getBrief(projectId: string): Promise<BriefResponse> {
   return getJson<BriefResponse>(`/projects/${projectId}/brief`)
+}
+
+export async function askQuestion(projectId: string, question: string): Promise<StructuredAnswer> {
+  const response = await fetch(`/projects/${projectId}/qa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+  })
+  if (!response.ok) {
+    throw new Error(`qa failed: ${response.status}`)
+  }
+  return response.json() as Promise<StructuredAnswer>
 }
 
 interface ResearchHandlers {

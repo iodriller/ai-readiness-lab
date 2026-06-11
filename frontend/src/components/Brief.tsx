@@ -2,13 +2,16 @@ import type { BriefResponse, SourceEvent } from '../api/client'
 import { Sources } from './ai/Sources'
 import type { SourceLike } from './ai/Sources'
 import OpportunityCardView from './OpportunityCardView'
+import QAPanel from './QAPanel'
 import ReportPreview from './ReportPreview'
 
 export default function Brief({
   brief,
+  projectId,
   sources = [],
 }: {
   brief: BriefResponse
+  projectId: string
   sources?: SourceEvent[]
 }) {
   // Prefer the evidence persisted on the brief (survives reload); fall back to the
@@ -51,6 +54,8 @@ export default function Brief({
           <Sources sources={evidence} title={`${evidence.length} public sources reviewed`} />
         </section>
       )}
+
+      <QAPanel projectId={projectId} />
 
       <ReportPreview />
     </div>

@@ -28,7 +28,7 @@ const brief: BriefResponse = {
 }
 
 test('renders the brief title, sample badge, and opportunity cards', () => {
-  render(<Brief brief={brief} />)
+  render(<Brief brief={brief} projectId="test-project-id" />)
   expect(screen.getByRole('heading', { name: /ai readiness brief: acme corp/i })).toBeInTheDocument()
   expect(screen.getByText(/sample/i)).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: /enterprise knowledge assistant/i })).toBeInTheDocument()

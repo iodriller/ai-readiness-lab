@@ -51,7 +51,9 @@ export default function ProjectScreen() {
       {phase === 'researching' && (
         <ResearchConsole steps={steps} interims={interims} sources={sources} done={false} />
       )}
-      {phase === 'ready' && brief && <Brief brief={brief} sources={sources} />}
+      {phase === 'ready' && brief && projectId && (
+        <Brief brief={brief} projectId={projectId} sources={sources} />
+      )}
       {phase === 'error' && (
         <p className="error">Research could not be completed. Please try again.</p>
       )}
