@@ -5,6 +5,8 @@
 import type {
   BriefResponse,
   CreateProjectRequest,
+  PilotPlan,
+  PilotQuestionsResponse,
   Project,
   ProjectSummary,
   SettingsStatus,
@@ -15,8 +17,12 @@ export type {
   BriefResponse,
   CreateProjectRequest,
   OpportunityCard,
+  PilotPlan,
+  PilotQuestion,
+  PilotQuestionsResponse,
   Project,
   ProjectSummary,
+  ReadinessScorecard,
   SettingsStatus,
   StructuredAnswer,
 } from './types'
@@ -81,6 +87,31 @@ export function listProjects(): Promise<ProjectSummary[]> {
 /** Download URLs for the exportable report (served with Content-Disposition). */
 export function reportUrl(projectId: string, format: 'md' | 'pdf'): string {
   return `/projects/${projectId}/report.${format}`
+}
+
+export function getPilotQuestions(
+  projectId: string,
+  opportunity: string,
+): Promise<PilotQuestionsResponse> {
+  return getJson<PilotQuestionsResponse>(
+    `/projects/${projectId}/pilot/questions?opportunity=${encodeURIComponent(opportunity)}`,
+  )
+}
+
+export async function submitPilot(
+  projectId: string,
+  opportunityName: string,
+  answers: Record<string, string>,
+): Promise<PilotPlan> {
+  const response = await fetch(`/projects/${projectId}/pilot`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ opportunity_name: opportunityName, answers }),
+  })
+  if (!response.ok) {
+    throw new Error(`pilot submit failed: ${response.status}`)
+  }
+  return response.json() as Promise<PilotPlan>
 }
 
 export async function askQuestion(projectId: string, question: string): Promise<StructuredAnswer> {

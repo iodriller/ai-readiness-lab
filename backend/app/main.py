@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.projects import router as projects_router
 from app.api.settings import router as settings_router
 from app.db.base import init_db
+from app.pilot.router import router as pilot_router
 from app.qa.router import router as qa_router
 
 
@@ -21,6 +22,7 @@ app = FastAPI(title="AI Readiness Lab API", version="0.1.0", lifespan=lifespan)
 app.include_router(projects_router)
 app.include_router(qa_router)
 app.include_router(settings_router)
+app.include_router(pilot_router)
 
 
 @app.get("/health")
