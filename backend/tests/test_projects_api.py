@@ -139,6 +139,38 @@ def test_peers_and_profile_endpoints_default_empty(client):
     assert client.get("/projects/missing/peers").status_code == 404
 
 
+def test_list_projects_returns_recent_first(client):
+    first = _create(client)
+    second = _create(client)
+    ids = [p["project_id"] for p in client.get("/projects").json()]
+    assert first in ids and second in ids
+    assert {"project_id", "company_name", "status", "created_at"} <= set(
+        client.get("/projects").json()[0]
+    )
+
+
+def test_report_markdown_downloads(client):
+    project_id = _create(client)
+    response = client.get(f"/projects/{project_id}/report.md")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/markdown")
+    assert "attachment" in response.headers["content-disposition"]
+    assert response.text.startswith("# AI Readiness Brief: Occidental")
+
+
+def test_report_pdf_downloads(client):
+    project_id = _create(client)
+    response = client.get(f"/projects/{project_id}/report.pdf")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    assert response.content[:5] == b"%PDF-"
+
+
+def test_report_404_for_missing_project(client):
+    assert client.get("/projects/nope/report.md").status_code == 404
+    assert client.get("/projects/nope/report.pdf").status_code == 404
+
+
 def test_brief_returns_sample_before_stream(client):
     project_id = _create(client)
     response = client.get(f"/projects/{project_id}/brief")
