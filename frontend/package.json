@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src",
-    "preview": "vite preview"
+    "test": "vitest run",
+    "preview": "vite preview",
+    "generate:types": "json2ts -i ../backend/schema.json -o src/api/types.ts --additionalProperties false"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -16,13 +18,19 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/react": "^18.3.17",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.17.0",
     "globals": "^15.13.0",
+    "jsdom": "^25.0.1",
+    "json-schema-to-typescript": "^15.0.4",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.1",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "vitest": "^3.2.6"
   }
 }

@@ -31,6 +31,9 @@ Thumbs.db
 # Reports generated at runtime
 data/reports/
 
+# Generated intermediate (TS types are committed; this bundle is regenerated)
+backend/schema.json
+
 # Claude Code local overrides
 .claude/settings.local.json
 frontend/tsconfig.tsbuildinfo

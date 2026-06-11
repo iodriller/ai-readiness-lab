@@ -10,6 +10,50 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 3 — Phase 1: Domain Contracts (Schemas First)
+
+**Done:**
+- Pydantic v2 domain models for spec §8 + §15 under `backend/app/models/`:
+  `Project`, `CompanyResearchPlan`, `SourceRecord`, `CompanyIntelligenceProfile`
+  (+ sub-models), `CompetitiveSignal`, `OpportunityCard`, `ReadinessScorecard`.
+  Shared enums + `Confidence`/`Score` value types in `models/base.py`.
+- Structured-output **repair loop** (`app/llm/repair.py`) with injected `repair_fn`
+  so it is unit-testable offline; strips ``` fences, bounded retries, raises
+  `StructuredOutputError` when unrepairable.
+- SQLAlchemy layer (`app/db/`): `Base`, engine/session, `ProjectRow`/`SourceRow`
+  (queryable columns + JSON payload). `init_db()` wired into FastAPI lifespan.
+- Env-driven `app/config.py` (pydantic-settings).
+- **TypeScript types generated from the Pydantic schemas**: `app/models/export.py`
+  emits `backend/schema.json`; `npm run generate:types` → `frontend/src/api/types.ts`.
+- Proper React wiring: typed API client (`src/api/client.ts`), `App.tsx` calls
+  `/health` with loading/online/offline states, **Vitest + Testing Library** set up
+  with 3 passing component tests.
+- CI updated to run `npm test`. Backend: 17 tests pass, ruff clean. Frontend:
+  typecheck + lint + 3 tests + build all pass.
+
+**Gaps / bugs found:**
+- `model_copy(update=...)` bypasses Pydantic validation — a test relied on it and
+  gave a false pass; fixed to construct fresh. Worth remembering for future tests.
+- Vitest 2.x pinned Vite 5 while the app uses Vite 6 (duplicate Vite, type clash);
+  fixed by upgrading to Vitest 3. Keep Vitest and Vite majors aligned.
+- `PeerType` and `Recommendation` are intentional supersets of the narrower enums
+  in spec §8.2/§15.4 (added `supplier`/`customer` and `not_recommended`) to match
+  the broader §3.3/§9.4 text. Reconcile the spec enums when convenient.
+- No CI check yet that `types.ts` is in sync with the schemas (would need Python in
+  the frontend job). Regeneration is a documented manual step for now.
+- `json2ts` emits noisy per-field aliases (`ProjectId`, `CompanyName1`, …); harmless
+  but ugly. Acceptable for a generated file.
+
+**What's left in Phase 1:** Nothing blocking — acceptance met (every model has a typed
+schema + round-trip test; invalid LLM JSON is repaired or rejected; TS types generated).
+
+**Next step (Phase 2 — Executive Shell):** Build the intake screen (company/role/mode),
+`POST /projects`, the SSE research-progress screen on mock data, the static sample
+brief, opportunity cards list, and report-preview placeholder — all wired through the
+typed API client. See `docs/IMPLEMENTATION_PLAN.md` Phase 2.
+
+---
+
 ### 2026-06-11 · Session 2 — Phase 0: Repository Scaffold
 
 **Done:**
@@ -86,6 +130,10 @@ pytest tests/test_health.py        # run a single test file
 ruff check .                       # lint
 ruff format .                      # format
 
+# Generate frontend types from backend schemas (run after changing app/models)
+cd backend && python -m app.models.export   # writes backend/schema.json
+cd ../frontend && npm run generate:types     # writes src/api/types.ts (do not hand-edit)
+
 # Frontend
 cd frontend
 npm install                        # install deps
@@ -93,6 +141,7 @@ npm run dev                        # dev server at http://localhost:5173
 npm run build                      # production build
 npm run typecheck                  # tsc --noEmit
 npm run lint                       # eslint
+npm test                           # vitest run
 ```
 
 ## Working rules

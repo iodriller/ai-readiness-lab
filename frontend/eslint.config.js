@@ -11,6 +11,7 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/'],
+    // Generated from the backend schemas — do not lint or hand-edit.
+    ignores: ['dist/', 'src/api/types.ts'],
   },
 )

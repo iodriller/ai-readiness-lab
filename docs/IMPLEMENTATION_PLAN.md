@@ -8,7 +8,7 @@ For the "what" and "why" — product vision, modes, and design — see docs/PROD
 
 # AI Readiness Lab — Implementation Plan
 
-**Status:** Planning / pre-scaffold
+**Status:** Phase 0 (scaffold) and Phase 1 (domain contracts) complete; Phase 2 next
 **Last updated:** 2026-06-11
 **Owner branch:** `claude/claude-md-best-practices-b31l7x`
 **Companion docs:** `docs/PRODUCT_SPEC.md` (vision), `CLAUDE.md` (agent working rules)
