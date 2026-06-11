@@ -76,7 +76,7 @@ function AnswerCard({ answer }: { answer: StructuredAnswer }) {
       <Section title="Why it matters" items={[answer.why_it_matters]} prose />
 
       {answer.peer_signals.length > 0 && (
-        <Section title="Peer &amp; industry signals" items={answer.peer_signals} />
+        <Section title="Peer & industry signals" items={answer.peer_signals} />
       )}
 
       <Section title="Pilot options" items={answer.pilot_options} />

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ProjectRow
 from app.models.company import CompanyIntelligenceProfile
-from app.models.competitive import CompetitiveSignal, PeerClassification
+from app.models.competitive import CompetitiveSignal
 from app.models.opportunity import OpportunityCard
 from app.opportunity.scorer import score_opportunities
 
@@ -22,7 +22,6 @@ from app.opportunity.scorer import score_opportunities
 class QAContext:
     company_name: str
     profile: CompanyIntelligenceProfile | None
-    peers: list[PeerClassification]
     signals: list[CompetitiveSignal]
     opportunity_cards: list[OpportunityCard]
     prior_answers: list[dict] = field(default_factory=list)
@@ -44,11 +43,9 @@ def gather_context(project_id: str, session: Session) -> QAContext | None:
         except Exception:
             pass
 
-    peers = [PeerClassification.model_validate(p) for p in payload.get("peers", [])]
-
     signals: list[CompetitiveSignal] = []
-    if profile and profile.competitive_signals:
-        signals = profile.competitive_signals
+    if profile and profile.competitive_ai_signals:
+        signals = profile.competitive_ai_signals
 
     if profile:
         opportunity_cards = score_opportunities(profile, signals)
@@ -65,7 +62,6 @@ def gather_context(project_id: str, session: Session) -> QAContext | None:
     return QAContext(
         company_name=company_name,
         profile=profile,
-        peers=peers,
         signals=signals,
         opportunity_cards=opportunity_cards,
         prior_answers=prior_answers,

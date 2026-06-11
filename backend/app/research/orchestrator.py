@@ -74,13 +74,9 @@ def _create_provider():
 
 def _create_llm():
     """Build LLM client from settings. Returns None if ANTHROPIC_API_KEY is not set."""
-    from app.config import get_settings
-    from app.llm.client import AnthropicClient
+    from app.llm.client import create_llm
 
-    s = get_settings()
-    if not s.anthropic_api_key:
-        return None
-    return AnthropicClient(s.anthropic_api_key)
+    return create_llm()
 
 
 def _research_budget() -> tuple[int, int]:

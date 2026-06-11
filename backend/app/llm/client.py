@@ -31,3 +31,12 @@ class AnthropicClient:
             )
 
         return repair
+
+
+def create_llm() -> AnthropicClient | None:
+    """Build the LLM client from settings. Returns None if no key is configured,
+    which signals every caller to use its offline/heuristic path."""
+    from app.config import get_settings
+
+    key = get_settings().anthropic_api_key
+    return AnthropicClient(key) if key else None
