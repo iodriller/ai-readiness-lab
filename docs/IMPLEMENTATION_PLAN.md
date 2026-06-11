@@ -8,10 +8,10 @@ For the "what" and "why" — product vision, modes, and design — see docs/PROD
 
 # AI Readiness Lab — Implementation Plan
 
-**Status:** Planning / pre-scaffold
+**Status:** Phases 0–5 complete (scaffold, domain contracts, executive shell, research orchestrator, streaming console, peer taxonomy, opportunity map); Phase 6 (Strategy Q&A) next
 **Last updated:** 2026-06-11
 **Owner branch:** `claude/claude-md-best-practices-b31l7x`
-**Companion docs:** `docs/PRODUCT_SPEC.md` (vision), `CLAUDE.md` (agent working rules)
+**Companion docs:** `docs/PRODUCT_SPEC.md` (vision), `docs/ARCHITECTURE.md` (flow diagrams), `CLAUDE.md` (agent working rules)
 
 ---
 
@@ -50,6 +50,10 @@ These come from `CLAUDE.md` and the product spec and apply to every phase:
 ---
 
 ## 2. Architecture Overview
+
+> **See `docs/ARCHITECTURE.md`** for the rendered Mermaid diagrams: the technical
+> flow, the user journey, and the streaming "show your work" sequence. The ASCII
+> sketch below is the quick-reference component map.
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
@@ -124,6 +128,9 @@ ai-readiness-lab/
 | --- | --- | --- |
 | LLM | Claude (`claude-opus-4-8` default) via Anthropic SDK | Strongest reasoning for structured synthesis; latest capable model. |
 | Structured output | Pydantic v2 schema + repair loop | Enforces the "validate at the boundary" rule; no raw JSON downstream. |
+| Web search | **DuckDuckGo default** (free, no key); Tavily / Serper opt-in via env key | Works out of the box with zero secrets; richer providers are a one-env-var swap. |
+| Research budget | Bounded run: **≤ 100 sources, ≤ 10 min** (`RESEARCH_MAX_SOURCES`, `RESEARCH_TIMEOUT_SECONDS`) | Deep research must terminate; on a budget hit we synthesize from evidence gathered so far. |
+| Frontend UI kit | **AI Elements (shadcn/ui)** — copy-paste components owned in-repo | Don't reinvent the wheel; native streaming + step/tool + citation primitives; max extensibility. |
 | Progress UX | Server-Sent Events from a job runner | Calm step-by-step progress without polling complexity. |
 | Storage | SQLite + local project files | Zero-config for demo and single-tenant internal deploys. |
 | PDF | Jinja2 → HTML → WeasyPrint (Playwright fallback) | Deterministic, templatable, no heavy runtime for the common case. |
@@ -258,6 +265,42 @@ non-trivial claim has at least one `source_ref` and a confidence value; the appe
 **Risks.** Flaky/low-quality sources → enforce min-source requirements (§15.2) and downgrade
 confidence; never fabricate to fill a field. **Depends on.** Phases 1–2.
 
+**Phase 3 status (2026-06-11): COMPLETE** — query planner, DuckDuckGo provider (Tavily/Serper
+opt-in), source ranker, Claude profiler + brief generator, orchestrator with the bounded research
+budget; graceful degradation to a flagged sample brief. See `docs/ARCHITECTURE.md`.
+
+---
+
+### Phase 3.5 — Streaming Research Console (AI Elements)  · _Size: M_
+
+**Objective.** Make the live research visible — the executive watches the agent work instead of
+staring at a spinner (see the user journey in `docs/ARCHITECTURE.md`).
+
+**Implementation steps.**
+1. Adopt **AI Elements (shadcn/ui)** in the frontend: install Tailwind + shadcn, pull the
+   Conversation, Message, Reasoning, Tool/Task, and Sources components into `src/components/ai/`.
+2. Build the **research console**: render `step` events as a task list; render new `interim`
+   and `source` SSE events (see the event-contract table in `docs/ARCHITECTURE.md`) as a live
+   "gathering…" feed with a source counter.
+3. Emit the `interim` / `source` events from the orchestrator as evidence is gathered.
+4. Replace the plain-CSS brief with AI Elements cards + a readiness gauge and inline citations.
+5. Add a **follow-up chat** affordance on the brief (streamed, source-grounded — wired in Phase 6).
+
+**Deliverables.** A streaming console that never sits silent; a visual brief with citations.
+**Tests.** Component tests for the console (renders step/interim/source events) and the brief.
+**Acceptance.** A non-developer sees continuous, legible progress and a visual, cited result.
+**Depends on.** Phase 3.
+
+**Status (2026-06-11): mostly COMPLETE.** Tailwind v4 adopted; AI Elements-style `Task` +
+`Sources` components own-in-repo under `src/components/ai/`; `ResearchConsole` renders the live
+step task list, interim feed, and a growing credibility-tagged source list with a count badge;
+the orchestrator streams `interim` + `source` SSE events as each search returns (bounded by the
+research budget); the brief shows an Evidence panel of the real sources reviewed. Verified live
+end-to-end against DuckDuckGo. **Deferred:** the follow-up **chat** affordance on the brief lands
+with Phase 6 (Strategy Q&A); richer brief visuals (readiness gauge) follow the scoring engine
+(Phase 8). Refinement noted: official-site detection needs the resolved company domain passed to
+the ranker (currently the company's own site classifies as `blog` until the profiler resolves it).
+
 ---
 
 ### Phase 4 — Peer Taxonomy & Competitive Intelligence  · _Size: M_
@@ -283,6 +326,12 @@ is never surfaced as a direct operator competitor.
 **Risks.** Industry edge cases → keep the reason field and let it be reviewable; expand eval set.
 **Depends on.** Phase 3.
 
+**Status (2026-06-11): COMPLETE.** `research/peer_classifier.py` (curated company→role rules,
+`PeerClassification` with a stated reason, low-confidence `adjacent_benchmark` for unknowns);
+`research/competitive_signals.py` (peer-type reconciliation + relevance filter);
+`GET /projects/{id}/peers` + `/profile`. Eval asserts the spec's Oxy/SLB example. The official-site
+classification refinement from Phase 3.5 is also fixed (`resolve_company_domain`).
+
 ---
 
 ### Phase 5 — AI Opportunity Map  · _Size: M_
@@ -304,6 +353,11 @@ rejects any card whose competitive_pressure text lacks a backing signal/source.
 **Acceptance.** For a researched company, the app emits 5–10 cards with credible "why now" text
 tied to evidence. **Risks.** Generic cards → require company-specific hooks in each summary.
 **Depends on.** Phases 3–4.
+
+**Status (2026-06-11): COMPLETE.** `app/opportunity/data/library.json` (14 use cases across the
+§6 categories) + `library.py` loader; `opportunity/scorer.py` ranks 5–10 cards by profile fit +
+competitive pressure + value/feasibility/risk. No-hallucination guard: a card names a peer only
+when a real signal backs it. Wired into the orchestrator's LLM path (cards fed into the brief).
 
 ---
 
@@ -491,11 +545,12 @@ The MVP ships when a user can, with **no developer setup**:
 
 ## 9. Open Questions (decide before the dependent phase)
 
-1. **Web search + fetch provider** — which API(s)? (Blocks Phase 3.)
-2. **SEC/filings retrieval** — in MVP or post-MVP? (Affects Phase 3 financial snapshot depth.)
-3. **Private/internal mode** — required for first customers? (Affects Phase 3/9 LLM + egress.)
-4. **Auth & multi-tenant** — single-tenant demo first, or auth from the start? (Affects Phase 0/11.)
-5. **Desktop packaging timing** — Tauri in MVP or as a fast follow? (Affects Phase 11.)
+1. ~~**Web search + fetch provider**~~ — **DECIDED:** DuckDuckGo by default (free, no key); Tavily / Serper opt-in via env key.
+2. ~~**Frontend UI kit**~~ — **DECIDED:** AI Elements (shadcn/ui), copy-paste components owned in-repo (see `docs/ARCHITECTURE.md`).
+3. **SEC/filings retrieval** — in MVP or post-MVP? (Affects Phase 3 financial snapshot depth.)
+4. **Private/internal mode** — required for first customers? (Affects Phase 3/9 LLM + egress.)
+5. **Auth & multi-tenant** — single-tenant demo first, or auth from the start? (Affects Phase 0/11.)
+6. **Desktop packaging timing** — Tauri in MVP or as a fast follow? (Affects Phase 11.)
 
 These are the user-facing/strategic decisions; everything else has a sensible default chosen above.
 
