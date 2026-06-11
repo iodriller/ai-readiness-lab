@@ -10,6 +10,38 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 14 — Phase 7: Guided Pilot Drill-Down (spec §11)
+
+**Done (fully deterministic — no LLM, works in sample mode):**
+- **Backend `app/pilot/` package.**
+  - `questions.py`: the 7 plain-English executive questions (§11.1) + `technical_checklist()` (the
+    §11.2 data/architecture/risk groups, with any named data platform — SharePoint/S3/AWS/… —
+    surfaced first).
+  - `scorer.py`: `score_pilot(card, answers)` → a reproducible `ReadinessScorecard`. Eight
+    dimensions derived by **explicit rubric** from the opportunity card's value/feasibility/risk/
+    depth levels plus answer substance (rubrics are code, not vibes — identical inputs always yield
+    identical scores). Maps overall → recommendation (proceed / limited_pilot / needs_discovery /
+    defer / not_recommended); generates strengths/blockers/next_actions.
+  - `models.py`: `PilotQuestion(s)Response`, `PilotProfile`, `TechnicalChecklistGroup`, `PilotPlan`.
+  - `router.py`: `GET /projects/{id}/pilot/questions?opportunity=`, `POST /projects/{id}/pilot`
+    (→ `PilotPlan`, persisted to `payload["pilot"]`), `GET /projects/{id}/pilot`.
+- **Report integration.** `render_markdown`/`render_pdf` now take an optional `PilotPlan` and emit
+  the §12.2 sections — Selected Pilot Recommendation, Readiness Scorecard, Technical Leader
+  Questions — when present.
+- **Frontend.** `OpportunityCardView` gains a "Plan this pilot" action; `Brief` tracks the selected
+  card and renders `PilotDrillDown` (7 questions → submit → `ReadinessScorecardView` with dimension
+  bars + recommendation badge + strengths/blockers/next actions, plus the technical checklist).
+- **Tests:** backend 131 (scorer determinism + rubric direction, checklist groups + platform
+  surfacing, all four endpoints incl. 404 + persistence + report-includes-pilot); frontend 20
+  (PilotDrillDown flow, ReadinessScorecardView bars/badge). Verified end-to-end: 7 questions →
+  92/proceed → report includes the scorecard + technical questions. Ruff/format, ESLint, tsc, Vite
+  build clean.
+
+**Next:** richer brief visuals (readiness gauge on the brief), then Phase 10 report polish (the
+report TOC already mirrors §12.2). Optional: LLM-assisted answer inference for unanswered fields.
+
+---
+
 ### 2026-06-11 · Session 13 — UX gaps: report export, project history, onboarding
 
 **Done (closed the flagged UX gaps):**

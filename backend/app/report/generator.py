@@ -8,6 +8,7 @@ no native deps, bundles cleanly) with text sanitized to the core-font charset.
 from __future__ import annotations
 
 from app.api.schemas import BriefResponse
+from app.pilot.models import PilotPlan
 
 _NARRATIVE = [
     ("What matters", "what_matters"),
@@ -17,7 +18,11 @@ _NARRATIVE = [
 ]
 
 
-def render_markdown(brief: BriefResponse, qa_history: list[dict] | None = None) -> str:
+def render_markdown(
+    brief: BriefResponse,
+    qa_history: list[dict] | None = None,
+    pilot: PilotPlan | None = None,
+) -> str:
     lines: list[str] = [f"# AI Readiness Brief: {brief.company_name}", ""]
     if brief.is_sample:
         lines += ["> _Illustrative sample — add an Anthropic API key for live research._", ""]
@@ -42,6 +47,32 @@ def render_markdown(brief: BriefResponse, qa_history: list[dict] | None = None) 
             f"- **First step:** {card.recommended_first_step}",
             "",
         ]
+
+    if pilot is not None:
+        sc = pilot.scorecard
+        lines += [
+            "## Selected Pilot Recommendation",
+            "",
+            f"**{pilot.profile.opportunity_name}**",
+            "",
+            "## Readiness Scorecard",
+            "",
+            f"**Overall readiness:** {sc.overall_score}/100  ·  "
+            f"**Recommendation:** {sc.recommendation.value.replace('_', ' ')}",
+            "",
+        ]
+        for dim, value in sc.dimensions.model_dump().items():
+            lines.append(f"- {dim.replace('_', ' ').title()}: {value}/100")
+        lines.append("")
+        if sc.strengths:
+            lines += ["**Strengths:**", *[f"- {s}" for s in sc.strengths], ""]
+        if sc.blockers:
+            lines += ["**Blockers:**", *[f"- {b}" for b in sc.blockers], ""]
+        if sc.next_actions:
+            lines += ["**Next actions:**", *[f"- {a}" for a in sc.next_actions], ""]
+        lines += ["## Technical Leader Questions", ""]
+        for group in pilot.technical_checklist:
+            lines += [f"### {group.category}", *[f"- {item}" for item in group.items], ""]
 
     if qa_history:
         lines += ["## Strategy Q&A", ""]
@@ -86,7 +117,11 @@ def _safe(text: str) -> str:
     return text.encode("latin-1", "replace").decode("latin-1")
 
 
-def render_pdf(brief: BriefResponse, qa_history: list[dict] | None = None) -> bytes:
+def render_pdf(
+    brief: BriefResponse,
+    qa_history: list[dict] | None = None,
+    pilot: PilotPlan | None = None,
+) -> bytes:
     from fpdf import FPDF
 
     pdf = FPDF()
@@ -129,6 +164,32 @@ def render_pdf(brief: BriefResponse, qa_history: list[dict] | None = None) -> by
             f"{card.time_to_pilot.value.replace('_', ' ')}\n"
             f"First step: {card.recommended_first_step}"
         )
+
+    if pilot is not None:
+        sc = pilot.scorecard
+        heading("Selected Pilot Recommendation", 16, 3)
+        body(pilot.profile.opportunity_name)
+        heading("Readiness Scorecard", 16, 3)
+        body(
+            f"Overall readiness: {sc.overall_score}/100 | "
+            f"Recommendation: {sc.recommendation.value.replace('_', ' ')}"
+        )
+        body(
+            "\n".join(
+                f"{dim.replace('_', ' ').title()}: {value}/100"
+                for dim, value in sc.dimensions.model_dump().items()
+            )
+        )
+        if sc.strengths:
+            body("Strengths:\n" + "\n".join(f"- {s}" for s in sc.strengths))
+        if sc.blockers:
+            body("Blockers:\n" + "\n".join(f"- {b}" for b in sc.blockers))
+        if sc.next_actions:
+            body("Next actions:\n" + "\n".join(f"- {a}" for a in sc.next_actions))
+        heading("Technical Leader Questions", 16, 3)
+        for group in pilot.technical_checklist:
+            heading(group.category, 12)
+            body("\n".join(f"- {item}" for item in group.items))
 
     if qa_history:
         heading("Strategy Q&A", 16, 3)

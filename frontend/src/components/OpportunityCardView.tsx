@@ -7,7 +7,13 @@ const TIME_LABEL: Record<OpportunityCard['time_to_pilot'], string> = {
   longer: 'longer',
 }
 
-export default function OpportunityCardView({ card }: { card: OpportunityCard }) {
+export default function OpportunityCardView({
+  card,
+  onPlan,
+}: {
+  card: OpportunityCard
+  onPlan?: (card: OpportunityCard) => void
+}) {
   return (
     <article className="opportunity-card">
       <header>
@@ -29,6 +35,15 @@ export default function OpportunityCardView({ card }: { card: OpportunityCard })
       <p className="first-step">
         <strong>First step:</strong> {card.recommended_first_step}
       </p>
+      {onPlan && (
+        <button
+          type="button"
+          onClick={() => onPlan(card)}
+          className="mt-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+        >
+          Plan this pilot →
+        </button>
+      )}
     </article>
   )
 }

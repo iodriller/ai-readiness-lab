@@ -13,6 +13,7 @@ from app.db.base import get_session
 from app.db.models import ProjectRow
 from app.models import CompanyIntelligenceProfile, PeerClassification, Project
 from app.models.base import Mode
+from app.pilot.models import PilotPlan
 from app.report.generator import render_markdown, render_pdf
 from app.research import orchestrator
 
@@ -26,6 +27,11 @@ def _sse_event(payload: dict) -> str:
 def _load_brief(row: ProjectRow) -> BriefResponse:
     stored = row.payload.get("brief")
     return BriefResponse.model_validate(stored) if stored else sample_brief(row.company_name)
+
+
+def _load_pilot(row: ProjectRow) -> PilotPlan | None:
+    stored = row.payload.get("pilot")
+    return PilotPlan.model_validate(stored) if stored else None
 
 
 @router.post("", response_model=Project)
@@ -113,7 +119,9 @@ def get_report_markdown(project_id: str, session: Session = Depends(get_session)
     row = session.get(ProjectRow, project_id)
     if row is None:
         raise HTTPException(status_code=404, detail="project not found")
-    markdown = render_markdown(_load_brief(row), row.payload.get("qa_history", []))
+    markdown = render_markdown(
+        _load_brief(row), row.payload.get("qa_history", []), _load_pilot(row)
+    )
     filename = _report_filename(row.company_name, "md")
     return Response(
         content=markdown,
@@ -127,7 +135,7 @@ def get_report_pdf(project_id: str, session: Session = Depends(get_session)) -> 
     row = session.get(ProjectRow, project_id)
     if row is None:
         raise HTTPException(status_code=404, detail="project not found")
-    pdf = render_pdf(_load_brief(row), row.payload.get("qa_history", []))
+    pdf = render_pdf(_load_brief(row), row.payload.get("qa_history", []), _load_pilot(row))
     filename = _report_filename(row.company_name, "pdf")
     return Response(
         content=pdf,
