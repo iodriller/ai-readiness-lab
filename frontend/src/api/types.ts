@@ -133,6 +133,10 @@ export type RecommendedFirstPilot = string;
 export type DataNeeded = string[];
 export type RisksToControl = string[];
 export type TechnicalQuestions = string[];
+export type HasApiKey = boolean;
+export type KeyHint = string;
+export type Mode1 = string;
+export type Source = string;
 
 export interface AIReadinessLabModels {
   Project?: Project;
@@ -146,6 +150,7 @@ export interface AIReadinessLabModels {
   CreateProjectRequest?: CreateProjectRequest;
   BriefResponse?: BriefResponse;
   StructuredAnswer?: StructuredAnswer;
+  SettingsStatus?: SettingsStatus;
 }
 export interface Project {
   project_id?: ProjectId;
@@ -334,4 +339,10 @@ export interface StructuredAnswer {
   data_needed: DataNeeded;
   risks_to_control: RisksToControl;
   technical_questions: TechnicalQuestions;
+}
+export interface SettingsStatus {
+  has_api_key: HasApiKey;
+  key_hint: KeyHint;
+  mode: Mode1;
+  source: Source;
 }

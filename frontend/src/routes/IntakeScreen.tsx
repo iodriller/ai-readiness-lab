@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createProject } from '../api/client'
 import type { CreateProjectRequest } from '../api/client'
+import SettingsPanel from '../components/SettingsPanel'
 
 const ROLES = ['CTO', 'CIO', 'CEO', 'COO', 'VP', 'Director', 'Transformation Lead', 'Consultant']
 
@@ -41,6 +42,10 @@ export default function IntakeScreen() {
         See where your company stands on AI, where competitors are moving, and which pilot is worth
         launching next.
       </p>
+
+      <div className="mb-4">
+        <SettingsPanel />
+      </div>
 
       <form onSubmit={handleSubmit}>
         <label>

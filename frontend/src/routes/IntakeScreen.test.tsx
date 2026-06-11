@@ -13,6 +13,11 @@ vi.mock('react-router-dom', async (importOriginal) => ({
 const createProject = vi.fn()
 vi.mock('../api/client', () => ({
   createProject: (...args: unknown[]) => createProject(...args),
+  // SettingsPanel (rendered by IntakeScreen) fetches status on mount.
+  getSettings: () =>
+    Promise.resolve({ has_api_key: false, key_hint: '', mode: 'sample', source: 'none' }),
+  saveApiKey: vi.fn(),
+  clearApiKey: vi.fn(),
 }))
 
 afterEach(() => {
@@ -27,7 +32,7 @@ function renderIntake() {
   )
 }
 
-test('renders intake fields without technical settings', () => {
+test('renders intake fields without technical settings', async () => {
   renderIntake()
   expect(screen.getByRole('heading', { name: /ai readiness lab/i })).toBeInTheDocument()
   expect(screen.getByText(/company name/i)).toBeInTheDocument()
@@ -35,6 +40,8 @@ test('renders intake fields without technical settings', () => {
   // Executive surface stays clean — no model/infra knobs.
   expect(screen.queryByText(/model/i)).not.toBeInTheDocument()
   expect(screen.queryByText(/vector/i)).not.toBeInTheDocument()
+  // Let the settings banner's mount effect settle.
+  await screen.findByText(/sample mode/i)
 })
 
 test('submitting creates a project and navigates to it', async () => {
@@ -55,7 +62,8 @@ test('submitting creates a project and navigates to it', async () => {
   expect(navigate).toHaveBeenCalledWith('/projects/abc123')
 })
 
-test('start button is disabled until a company name is entered', () => {
+test('start button is disabled until a company name is entered', async () => {
   renderIntake()
   expect(screen.getByRole('button', { name: /start review/i })).toBeDisabled()
+  await screen.findByText(/sample mode/i)
 })

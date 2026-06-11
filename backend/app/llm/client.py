@@ -33,10 +33,17 @@ class AnthropicClient:
         return repair
 
 
-def create_llm() -> AnthropicClient | None:
-    """Build the LLM client from settings. Returns None if no key is configured,
-    which signals every caller to use its offline/heuristic path."""
+def resolve_api_key() -> str | None:
+    """The Anthropic key, preferring the one the user pasted in-app (stored in the
+    OS keychain) over an environment/.env value. Returns None if none is set."""
     from app.config import get_settings
+    from app.settings_store import get_api_key
 
-    key = get_settings().anthropic_api_key
+    return get_api_key() or get_settings().anthropic_api_key
+
+
+def create_llm() -> AnthropicClient | None:
+    """Build the LLM client. Returns None if no key is configured, which signals
+    every caller to use its offline/heuristic path."""
+    key = resolve_api_key()
     return AnthropicClient(key) if key else None
