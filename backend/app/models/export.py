@@ -15,6 +15,7 @@ from pydantic.json_schema import models_json_schema
 from app.api.schemas import BriefResponse, CreateProjectRequest, ProjectSummary
 from app.api.settings import SettingsStatus
 from app.models import TOP_LEVEL_MODELS
+from app.pilot.models import PilotPlan, PilotQuestionsResponse
 from app.qa.composer import StructuredAnswer
 
 # Domain models plus the API request/response schemas the frontend consumes.
@@ -25,6 +26,8 @@ _EXPORTED_MODELS = [
     StructuredAnswer,
     SettingsStatus,
     ProjectSummary,
+    PilotQuestionsResponse,
+    PilotPlan,
 ]
 
 _OUTPUT = Path(__file__).resolve().parents[2] / "schema.json"

@@ -143,6 +143,14 @@ export type UserRole2 = string;
 export type Mode2 = string;
 export type Status = string;
 export type CreatedAt1 = string;
+export type OpportunityName = string;
+export type Id = string;
+export type Prompt = string;
+export type Questions = PilotQuestion[];
+export type OpportunityName1 = string;
+export type Category1 = string;
+export type Items = string[];
+export type TechnicalChecklist = TechnicalChecklistGroup[];
 
 export interface AIReadinessLabModels {
   Project?: Project;
@@ -158,6 +166,8 @@ export interface AIReadinessLabModels {
   StructuredAnswer?: StructuredAnswer;
   SettingsStatus?: SettingsStatus;
   ProjectSummary?: ProjectSummary;
+  PilotQuestionsResponse?: PilotQuestionsResponse;
+  PilotPlan?: PilotPlan;
 }
 export interface Project {
   project_id?: ProjectId;
@@ -363,4 +373,38 @@ export interface ProjectSummary {
   mode: Mode2;
   status: Status;
   created_at: CreatedAt1;
+}
+/**
+ * The plain-English questions to ask after an opportunity is selected (§11.1).
+ */
+export interface PilotQuestionsResponse {
+  opportunity_name: OpportunityName;
+  questions: Questions;
+}
+export interface PilotQuestion {
+  id: Id;
+  prompt: Prompt;
+}
+/**
+ * The drill-down output: the profile, a readiness score, and the technical
+ * discovery checklist that bridges executive intent to technical execution (§11.2).
+ */
+export interface PilotPlan {
+  profile: PilotProfile;
+  scorecard: ReadinessScorecard;
+  technical_checklist: TechnicalChecklist;
+}
+/**
+ * A selected opportunity narrowed by the executive's answers.
+ */
+export interface PilotProfile {
+  opportunity_name: OpportunityName1;
+  answers?: Answers;
+}
+export interface Answers {
+  [k: string]: string;
+}
+export interface TechnicalChecklistGroup {
+  category: Category1;
+  items: Items;
 }
