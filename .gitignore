@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+*.db
+*.sqlite
+
+# Node
+node_modules/
+dist/
+
+# Env — never commit real secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Reports generated at runtime
+data/reports/
+
+# Claude Code local overrides
+.claude/settings.local.json
+frontend/tsconfig.tsbuildinfo
+frontend/dist/
