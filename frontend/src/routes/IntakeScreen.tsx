@@ -9,6 +9,7 @@ const MODES: { value: CreateProjectRequest['mode']; label: string }[] = [
   { value: 'discover_opportunities', label: 'Find AI opportunities' },
   { value: 'evaluate_idea', label: 'Evaluate a specific AI idea' },
   { value: 'strategy_question', label: 'Ask a strategy question' },
+  { value: 'compare_competitors', label: 'Compare against competitors' },
 ]
 
 export default function IntakeScreen() {

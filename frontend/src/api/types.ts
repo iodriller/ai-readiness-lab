@@ -8,7 +8,7 @@
 export type ProjectId = string;
 export type CompanyName = string;
 export type UserRole = string;
-export type Mode = "discover_opportunities" | "evaluate_idea" | "strategy_question";
+export type Mode = "discover_opportunities" | "evaluate_idea" | "strategy_question" | "compare_competitors";
 export type CreatedAt = string;
 export type ProjectStatus = "researching" | "ready" | "report_generated";
 export type CompanyName1 = string;

@@ -1,4 +1,4 @@
-"""Contract tests for the executive-shell project API (Phase 2)."""
+"""Contract tests for the executive-shell project API (Phase 2 + Phase 3)."""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -6,9 +6,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.api import projects
+from app.api import projects  # noqa: F401 (keep import so we can reference module)
 from app.db.base import Base, get_session
 from app.main import app
+from app.research import orchestrator
 
 
 @pytest.fixture
@@ -25,10 +26,12 @@ def client(monkeypatch):
         with factory() as session:
             yield session
 
-    # Stream uses its own session factory and a per-step delay; point both at the
-    # in-memory engine and remove the delay so the contract test is fast.
-    monkeypatch.setattr(projects, "SessionLocal", factory)
-    monkeypatch.setattr(projects, "STEP_DELAY_SECONDS", 0.0)
+    # Orchestrator uses its own session factory and may call external APIs;
+    # redirect both to the in-memory engine and disable all network calls.
+    monkeypatch.setattr(orchestrator, "SessionLocal", factory)
+    monkeypatch.setattr(orchestrator, "STEP_DELAY_SECONDS", 0.0)
+    monkeypatch.setattr(orchestrator, "_create_provider", lambda: None)
+    monkeypatch.setattr(orchestrator, "_create_llm", lambda: None)
     app.dependency_overrides[get_session] = override_session
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -71,24 +74,23 @@ def test_research_stream_emits_all_steps_then_done(client):
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/event-stream")
 
+    import json
+
     events = [
-        line.removeprefix("data: ")
+        json.loads(line.removeprefix("data: "))
         for line in response.text.splitlines()
         if line.startswith("data: ")
     ]
-    import json
-
-    parsed = [json.loads(event) for event in events]
-    steps = [event for event in parsed if event["type"] == "step"]
-    assert len(steps) == len(projects.RESEARCH_STEPS)
-    assert steps[0]["label"] == projects.RESEARCH_STEPS[0]
-    assert parsed[-1] == {"type": "done"}
+    steps = [e for e in events if e["type"] == "step"]
+    assert len(steps) == len(orchestrator.RESEARCH_STEPS)
+    assert steps[0]["label"] == orchestrator.RESEARCH_STEPS[0]
+    assert events[-1] == {"type": "done"}
 
     # Research completion flips the project to ready.
     assert client.get(f"/projects/{project_id}").json()["status"] == "ready"
 
 
-def test_brief_returns_sample_with_opportunities(client):
+def test_brief_returns_sample_before_stream(client):
     project_id = _create(client)
     response = client.get(f"/projects/{project_id}/brief")
     assert response.status_code == 200
@@ -97,3 +99,14 @@ def test_brief_returns_sample_with_opportunities(client):
     assert body["company_name"] == "Occidental"
     assert len(body["opportunities"]) >= 1
     assert body["opportunities"][0]["business_value"] in {"low", "medium", "high"}
+
+
+def test_brief_stored_after_stream(client):
+    project_id = _create(client)
+    client.get(f"/projects/{project_id}/research/stream")  # runs the mock pipeline
+    response = client.get(f"/projects/{project_id}/brief")
+    assert response.status_code == 200
+    body = response.json()
+    # Mock path stores sample_brief — still valid, just confirming it's served from DB.
+    assert body["company_name"] == "Occidental"
+    assert len(body["opportunities"]) >= 1

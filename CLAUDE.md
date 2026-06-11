@@ -10,6 +10,72 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 5 — Gap fixes + Phase 3: Research Orchestrator
+
+**Done:**
+- **Gap fixes (from Session 4 log):**
+  - Added `compare_competitors` to `Mode` enum; added 4th radio option to `IntakeScreen.tsx`;
+    regenerated `src/api/types.ts` (Mode now includes all 4 values).
+  - Fixed React Router v6 future-flag warnings: added `future={{ v7_startTransition: true,
+    v7_relativeSplatPath: true }}` to `MemoryRouter` in `IntakeScreen.test.tsx` and the new
+    `ProjectScreen.test.tsx`.
+  - Added `ProjectScreen.test.tsx` (3 tests: step progress, brief ready, error state) using
+    mocked `subscribeResearch` and `getBrief`.
+- **Phase 3 — Research Orchestrator:**
+  - `backend/app/llm/client.py` — `AnthropicClient` wrapping the Anthropic SDK (model
+    `claude-opus-4-8`) with `complete()` and `as_repair_fn()`.
+  - `backend/app/research/providers.py` — `SearchProvider` protocol + three implementations:
+    `TavilyProvider` (TAVILY_API_KEY), `SerperProvider` (SERPER_API_KEY), `DuckDuckGoProvider`
+    (free, open-source, no API key — uses `duckduckgo-search` package). Factory `get_provider`
+    picks highest-priority available provider.
+  - `backend/app/research/query_planner.py` — `QuerySet` dataclass + `plan_queries()` generating
+    7 search buckets (identity, financial, strategic, competitors, competitor_ai, industry_ai,
+    company_ai) with mode-specific extras.
+  - `backend/app/research/source_ranker.py` — domain-pattern classification of `SourceType`,
+    confidence hierarchy (filing=0.95 > official=0.90 > analyst=0.80 > news=0.70 … > blog=0.40),
+    URL deduplication, ranked `classify_and_rank()`.
+  - `backend/app/research/company_profiler.py` — prompts Claude to extract
+    `CompanyIntelligenceProfile` from up to 20 ranked sources; uses repair loop; returns minimal
+    profile on failure.
+  - `backend/app/research/brief_generator.py` — prompts Claude to generate `BriefResponse` from
+    the profile; falls back to `sample_brief()` on failure.
+  - `backend/app/research/orchestrator.py` — main async generator `run()`: parallel search
+    gather → source classification → LLM profiling → brief generation → brief persisted in
+    `ProjectRow.payload["brief"]`. **Mock path** (no API keys → `_create_provider` and
+    `_create_llm` both return None) fires 8 steps with configurable `STEP_DELAY_SECONDS`; no
+    network calls needed.
+  - `backend/app/api/projects.py` simplified — SSE endpoint calls `orchestrator.run()`;
+    `GET /projects/{id}/brief` reads stored brief from `payload["brief"]`, falls back to
+    `sample_brief()` if not yet populated.
+  - `requirements.txt` updated: `anthropic==0.109.1`, `tavily-python==0.7.26`,
+    `duckduckgo-search==8.1.1`.
+  - 28 new tests across `test_query_planner.py`, `test_source_ranker.py`,
+    `test_company_profiler.py`, `test_orchestrator.py`. Total: 50 backend + 8 frontend, all pass.
+    Ruff clean, ESLint clean, tsc clean, build passes.
+
+**Gaps / bugs found:**
+- `brief_generator.py` prompt uses Python f-string with `{{` / `}}` for literal braces inside
+  a triple-quoted template; slightly awkward but works. Could be refactored to a Jinja2 template
+  when more prompts exist.
+- `duckduckgo-search` 8.x: `DDGS` is no longer a context manager in all environments — using
+  `DDGS().text(...)` directly (no `with` block). If the package breaks, swap to Tavily/Serper.
+- The LLM brief is stored in `ProjectRow.payload["brief"]` (mixed into the Project JSON blob).
+  Consider a separate `BriefRow` table in Phase 4 when the brief grows.
+- No ANTHROPIC_API_KEY → LLM profiling is skipped silently; brief returned is still
+  `is_sample=True`. This is correct behaviour for the demo, but a UI indicator ("sample data —
+  set ANTHROPIC_API_KEY for real research") would be more transparent.
+
+**What's left in Phase 3:** Nothing blocking — acceptance met (real search + LLM profiling
+pipeline wired end-to-end; graceful degradation to sample data when no keys; all tests pass).
+
+**Next step (Phase 4 — Peer & Competitive Intelligence):** Build the competitive-signal
+extractor that populates `CompetitiveSignal` list per peer; expand source queries to target
+competitor announcements, job boards, and press releases; add peer-taxonomy resolution; surface
+competitive signals in the Brief and opportunity cards. See `docs/IMPLEMENTATION_PLAN.md`
+Phase 4.
+
+---
+
 ### 2026-06-11 · Session 4 — Phase 2: Executive Shell
 
 **Done:**

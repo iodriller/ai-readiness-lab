@@ -26,6 +26,7 @@ class Mode(str, Enum):
     discover_opportunities = "discover_opportunities"
     evaluate_idea = "evaluate_idea"
     strategy_question = "strategy_question"
+    compare_competitors = "compare_competitors"
 
 
 class ProjectStatus(str, Enum):
