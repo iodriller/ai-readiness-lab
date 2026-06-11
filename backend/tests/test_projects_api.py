@@ -90,6 +90,32 @@ def test_research_stream_emits_all_steps_then_done(client):
     assert client.get(f"/projects/{project_id}").json()["status"] == "ready"
 
 
+def test_research_stream_emits_source_and_interim_events(client, monkeypatch):
+    # Provider present (no LLM) → real path streams source + interim events over SSE.
+    class _FakeProvider:
+        def search(self, query, max_results=5):
+            from app.research.providers import SearchResult
+
+            return [SearchResult(url="https://reuters.com/x", title="News X", snippet="...")]
+
+    monkeypatch.setattr(orchestrator, "_create_provider", lambda: _FakeProvider())
+
+    import json
+
+    project_id = _create(client)
+    response = client.get(f"/projects/{project_id}/research/stream")
+    events = [
+        json.loads(line.removeprefix("data: "))
+        for line in response.text.splitlines()
+        if line.startswith("data: ")
+    ]
+    types = {e["type"] for e in events}
+    assert {"step", "interim", "source", "done"} <= types
+    source = next(e for e in events if e["type"] == "source")
+    assert source["url"] == "https://reuters.com/x"
+    assert source["source_type"] == "news"
+
+
 def test_brief_returns_sample_before_stream(client):
     project_id = _create(client)
     response = client.get(f"/projects/{project_id}/brief")

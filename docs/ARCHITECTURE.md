@@ -159,7 +159,7 @@ sequenceDiagram
 | Event | Payload | Status |
 | --- | --- | --- |
 | `step` | `{ index, total, label }` — coarse progress | implemented |
-| `interim` | `{ label, detail }` — "gathering X", partial finding | planned (Phase 4 console) |
-| `source` | `{ url, source_type, confidence }` — live source counter | planned (Phase 4 console) |
+| `interim` | `{ label, detail }` — "gathering X", partial finding | implemented (Phase 3.5) |
+| `source` | `{ url, title, source_type, confidence }` — live source counter | implemented (Phase 3.5) |
 | `done` | `{}` — sentinel; client closes SSE, fetches brief | implemented |
 | `error` | `{ message }` — terminal failure | implemented (client-side) |

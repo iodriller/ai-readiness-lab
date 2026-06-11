@@ -10,6 +10,51 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 7 — Phase 3.5: Streaming Research Console (AI Elements)
+
+**Done:**
+- **Backend — live streaming events:** orchestrator now emits `interim` (`{label, detail}`) and
+  `source` (`{url, title, source_type, confidence}`) SSE events. New `_stream_sources()` runs the
+  planned searches with `asyncio.as_completed`, classifies + dedupes each batch, and yields a
+  `source` event per kept result as it arrives — bounded by the research budget (max sources +
+  wall-clock timeout). Sources are re-ranked before the top 20 go to the LLM. Verified live
+  end-to-end against real DuckDuckGo (steps + interim + real source URLs stream correctly).
+- **Frontend — AI Elements adoption:** added **Tailwind v4** via `@tailwindcss/vite` (+ `clsx`,
+  `tailwind-merge`, `cn()` helper in `src/lib/utils.ts`). Authored AI Elements-style components
+  owned in-repo under `src/components/ai/`: `Task`/`TaskItem` (status icons incl. animated active
+  spinner) and `Sources` (count badge + credibility-tagged list). New `ResearchConsole` composes
+  them: live step task list, last-3 interim findings under the active step, and a growing source
+  list. `ProjectScreen` now tracks `interims`/`sources` and renders the console; the `Brief` shows
+  an Evidence panel of the real sources reviewed.
+- **Client:** `subscribeResearch` dispatches by event type with optional `onInterim`/`onSource`
+  handlers; added `InterimEvent`/`SourceEvent` types. Removed the old `ResearchProgress` component.
+- **Tests:** backend 53 (added real-path streaming + budget tests, SSE source/interim contract
+  test); frontend 9 (new `ResearchConsole` tests; existing ProjectScreen/Brief still green).
+  Typecheck, ESLint, Vite build (Tailwind compiles) all clean.
+- **Docs:** ARCHITECTURE event contract marks `interim`/`source` implemented; IMPLEMENTATION_PLAN
+  Phase 3.5 marked mostly complete.
+
+**Gaps / bugs found:**
+- **Official-site misclassification:** the company's own domain (e.g. `oxy.com`) classifies as
+  `blog` until the profiler resolves the domain, because `company_domain` isn't passed to the
+  ranker during the live search phase. Fix when the profiler resolves identity first, or do a
+  cheap pre-resolve. Wikipedia also lands as `blog` — add a small known-domain rule if desired.
+- **Brief sources are session-only:** the Evidence panel uses the `sources` accumulated in the
+  client during the SSE run; on a hard reload `/brief` doesn't return them. Persist sources with
+  the brief (or expose `GET /projects/{id}/sources`) in a later phase.
+- **Tailwind + plain CSS coexist:** new AI components use Tailwind; older screens still use
+  `index.css`. Fine, but migrate the rest to Tailwind when touching them to avoid two systems.
+
+**What's left in Phase 3.5:** Follow-up **chat** on the brief (deferred to Phase 6) and the
+readiness gauge (after Phase 8 scoring). Core acceptance met: the console never sits silent and
+shows real, credibility-ranked sources live.
+
+**Next step (Phase 4 — Peer Taxonomy & Competitive Intelligence):** peer classifier with stated
+reasons + `CompetitiveSignal` extraction per peer; pass the resolved company domain to the ranker
+to fix official-site classification. See `docs/IMPLEMENTATION_PLAN.md` Phase 4.
+
+---
+
 ### 2026-06-11 · Session 6 — Flow diagrams, UI-kit decision, DuckDuckGo + research budget
 
 **Done:**

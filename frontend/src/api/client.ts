@@ -11,10 +11,24 @@ export interface Health {
 }
 
 export interface ResearchStep {
-  type: 'step' | 'done'
-  index?: number
-  total?: number
-  label?: string
+  type: 'step'
+  index: number
+  total: number
+  label: string
+}
+
+export interface InterimEvent {
+  type: 'interim'
+  label: string
+  detail: string
+}
+
+export interface SourceEvent {
+  type: 'source'
+  url: string
+  title: string
+  source_type: string
+  confidence: number
 }
 
 async function getJson<T>(path: string): Promise<T> {
@@ -47,6 +61,8 @@ export function getBrief(projectId: string): Promise<BriefResponse> {
 
 interface ResearchHandlers {
   onStep: (step: ResearchStep) => void
+  onInterim?: (interim: InterimEvent) => void
+  onSource?: (source: SourceEvent) => void
   onDone: () => void
   onError?: () => void
 }
@@ -56,12 +72,20 @@ export function subscribeResearch(projectId: string, handlers: ResearchHandlers)
   const source = new EventSource(`/projects/${projectId}/research/stream`)
 
   source.onmessage = (event) => {
-    const step = JSON.parse(event.data) as ResearchStep
-    if (step.type === 'done') {
-      source.close()
-      handlers.onDone()
-    } else {
-      handlers.onStep(step)
+    const data = JSON.parse(event.data) as { type: string }
+    switch (data.type) {
+      case 'done':
+        source.close()
+        handlers.onDone()
+        break
+      case 'interim':
+        handlers.onInterim?.(data as InterimEvent)
+        break
+      case 'source':
+        handlers.onSource?.(data as SourceEvent)
+        break
+      default:
+        handlers.onStep(data as ResearchStep)
     }
   }
 

@@ -291,6 +291,16 @@ staring at a spinner (see the user journey in `docs/ARCHITECTURE.md`).
 **Acceptance.** A non-developer sees continuous, legible progress and a visual, cited result.
 **Depends on.** Phase 3.
 
+**Status (2026-06-11): mostly COMPLETE.** Tailwind v4 adopted; AI Elements-style `Task` +
+`Sources` components own-in-repo under `src/components/ai/`; `ResearchConsole` renders the live
+step task list, interim feed, and a growing credibility-tagged source list with a count badge;
+the orchestrator streams `interim` + `source` SSE events as each search returns (bounded by the
+research budget); the brief shows an Evidence panel of the real sources reviewed. Verified live
+end-to-end against DuckDuckGo. **Deferred:** the follow-up **chat** affordance on the brief lands
+with Phase 6 (Strategy Q&A); richer brief visuals (readiness gauge) follow the scoring engine
+(Phase 8). Refinement noted: official-site detection needs the resolved company domain passed to
+the ranker (currently the company's own site classifies as `blog` until the profiler resolves it).
+
 ---
 
 ### Phase 4 — Peer Taxonomy & Competitive Intelligence  · _Size: M_

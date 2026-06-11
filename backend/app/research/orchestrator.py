@@ -43,6 +43,22 @@ def _step_event(index: int, total: int, label: str) -> dict:
     return {"type": "step", "index": index, "total": total, "label": label}
 
 
+def _interim_event(label: str, detail: str = "") -> dict:
+    return {"type": "interim", "label": label, "detail": detail}
+
+
+def _source_event(result) -> dict:
+    from app.research.source_ranker import confidence_for
+
+    return {
+        "type": "source",
+        "url": result.url,
+        "title": result.title,
+        "source_type": result.source_type.value,
+        "confidence": round(confidence_for(result.source_type), 2),
+    }
+
+
 def _done_event() -> dict:
     return {"type": "done"}
 
@@ -104,40 +120,26 @@ async def run(project_id: str, company_name: str, mode: Mode) -> AsyncGenerator[
 
     yield _step_event(1, total, RESEARCH_STEPS[0])
     yield _step_event(2, total, RESEARCH_STEPS[1])
-
-    # Collect search results in parallel, bounded by the research budget
-    # (max sources + wall-clock timeout). If the budget is hit we synthesize
-    # from whatever evidence has been gathered so far rather than blocking.
-    max_sources, timeout_s = _research_budget()
-    sources = []
-    try:
-        from app.research.query_planner import plan_queries
-        from app.research.source_ranker import classify_and_rank
-
-        queries = plan_queries(company_name, mode)
-
-        async def _search(q: str) -> list:
-            if provider is None:
-                return []
-            return await asyncio.to_thread(provider.search, q, 5)
-
-        result_lists = await asyncio.wait_for(
-            asyncio.gather(*[_search(q) for q in queries.all_queries()], return_exceptions=True),
-            timeout=timeout_s,
-        )
-        for r in result_lists:
-            if not isinstance(r, Exception):
-                sources.extend(r)
-        sources = classify_and_rank(sources)[:max_sources]
-    except TimeoutError:
-        log.warning("Research budget timeout (%ss) for project=%r", timeout_s, project_id)
-    except Exception:
-        log.warning("Search phase failed for project=%r", project_id, exc_info=True)
-
     yield _step_event(3, total, RESEARCH_STEPS[2])
     yield _step_event(4, total, RESEARCH_STEPS[3])
+
+    # Collect sources, streaming each one to the UI as its search returns, bounded
+    # by the research budget (max sources + wall-clock timeout). If the budget is
+    # hit we synthesize from whatever evidence we gathered rather than blocking.
+    sources = []
+    if provider is not None:
+        async for event in _stream_sources(company_name, mode, provider):
+            if event["type"] == "source":
+                sources.append(event.pop("_result"))
+            yield event
+
     yield _step_event(5, total, RESEARCH_STEPS[4])
     yield _step_event(6, total, RESEARCH_STEPS[5])
+
+    # Re-rank across all batches so the top sources go to the LLM first.
+    from app.research.source_ranker import classify_and_rank
+
+    sources = classify_and_rank(sources)
 
     # LLM profiling and brief generation.
     if llm is not None and sources:
@@ -145,6 +147,7 @@ async def run(project_id: str, company_name: str, mode: Mode) -> AsyncGenerator[
             from app.research.brief_generator import generate_brief
             from app.research.company_profiler import profile_company
 
+            yield _interim_event("Analyzing evidence with Claude", "Extracting a company profile")
             profile = await asyncio.to_thread(profile_company, company_name, sources[:20], llm)
             yield _step_event(7, total, RESEARCH_STEPS[6])
             brief = await asyncio.to_thread(generate_brief, profile, llm)
@@ -161,6 +164,48 @@ async def run(project_id: str, company_name: str, mode: Mode) -> AsyncGenerator[
     yield _step_event(8, total, RESEARCH_STEPS[7])
     await asyncio.to_thread(_store_brief, project_id, brief)
     yield _done_event()
+
+
+async def _stream_sources(company_name, mode, provider) -> AsyncGenerator[dict, None]:
+    """Run the planned searches and yield interim + source events as results arrive.
+
+    Each `source` event carries a private `_result` SearchResult the caller pops
+    off to accumulate the evidence set. Bounded by (max_sources, timeout_seconds).
+    """
+    from app.research.query_planner import plan_queries
+    from app.research.source_ranker import classify_and_rank
+
+    max_sources, timeout_s = _research_budget()
+    queries = plan_queries(company_name, mode).all_queries()
+    yield _interim_event("Searching public web sources", f"{len(queries)} research angles")
+
+    async def _search(q: str) -> list:
+        return await asyncio.to_thread(provider.search, q, 5)
+
+    seen: set[str] = set()
+    kept = 0
+    tasks = [asyncio.create_task(_search(q)) for q in queries]
+    try:
+        for future in asyncio.as_completed(tasks, timeout=timeout_s):
+            try:
+                results = await future
+            except Exception:
+                continue
+            for r in classify_and_rank(results):
+                if not r.url or r.url in seen or kept >= max_sources:
+                    continue
+                seen.add(r.url)
+                kept += 1
+                yield {**_source_event(r), "_result": r}
+            if kept >= max_sources:
+                break
+    except (TimeoutError, asyncio.TimeoutError):
+        log.warning("Research budget timeout (%ss) for company=%r", timeout_s, company_name)
+    finally:
+        for t in tasks:
+            t.cancel()
+
+    yield _interim_event("Ranked sources by credibility", f"{kept} sources kept")
 
 
 async def _mock_run(project_id: str, company_name: str) -> AsyncGenerator[dict, None]:

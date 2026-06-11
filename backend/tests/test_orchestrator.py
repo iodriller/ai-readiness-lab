@@ -72,3 +72,41 @@ def test_all_four_modes_work(_disable_external):
     for mode in Mode:
         events = _collect("p1", "Co", mode)
         assert events[-1]["type"] == "done"
+
+
+class _FakeProvider:
+    """Returns two fixed results per query so the real path runs offline."""
+
+    def search(self, query, max_results=5):
+        from app.research.providers import SearchResult
+
+        return [
+            SearchResult(url="https://reuters.com/a", title="News A", snippet="..."),
+            SearchResult(url="https://sec.gov/b", title="Filing B", snippet="..."),
+        ]
+
+
+def test_real_path_streams_source_and_interim_events(monkeypatch, _disable_external):
+    # Provider present, no LLM → real search path, sample brief.
+    monkeypatch.setattr(orchestrator, "_create_provider", lambda: _FakeProvider())
+    events = _collect("p1", "Test Corp", Mode.discover_opportunities)
+
+    sources = [e for e in events if e["type"] == "source"]
+    interims = [e for e in events if e["type"] == "interim"]
+    assert sources, "expected source events on the real path"
+    assert interims, "expected interim events on the real path"
+    # Sources are deduplicated by URL across all query batches.
+    assert len({s["url"] for s in sources}) == len(sources)
+    # Each source event carries classification + confidence; no private field leaks.
+    first = sources[0]
+    assert set(first) == {"type", "url", "title", "source_type", "confidence"}
+    assert 0.0 <= first["confidence"] <= 1.0
+    assert events[-1] == {"type": "done"}
+
+
+def test_real_path_respects_max_sources_budget(monkeypatch, _disable_external):
+    monkeypatch.setattr(orchestrator, "_create_provider", lambda: _FakeProvider())
+    monkeypatch.setattr(orchestrator, "_research_budget", lambda: (1, 600))
+    events = _collect("p1", "Test Corp", Mode.discover_opportunities)
+    sources = [e for e in events if e["type"] == "source"]
+    assert len(sources) == 1

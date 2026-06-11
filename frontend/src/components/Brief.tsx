@@ -1,8 +1,15 @@
-import type { BriefResponse } from '../api/client'
+import type { BriefResponse, SourceEvent } from '../api/client'
+import { Sources } from './ai/Sources'
 import OpportunityCardView from './OpportunityCardView'
 import ReportPreview from './ReportPreview'
 
-export default function Brief({ brief }: { brief: BriefResponse }) {
+export default function Brief({
+  brief,
+  sources = [],
+}: {
+  brief: BriefResponse
+  sources?: SourceEvent[]
+}) {
   return (
     <div className="brief">
       <header className="brief-header">
@@ -33,6 +40,13 @@ export default function Brief({ brief }: { brief: BriefResponse }) {
           ))}
         </div>
       </section>
+
+      {sources.length > 0 && (
+        <section className="evidence">
+          <h2>Evidence</h2>
+          <Sources sources={sources} title={`${sources.length} public sources reviewed`} />
+        </section>
+      )}
 
       <ReportPreview />
     </div>
