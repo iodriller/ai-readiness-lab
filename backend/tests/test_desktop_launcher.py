@@ -3,9 +3,9 @@
 import importlib.util
 from pathlib import Path
 
-# Load desktop/app.py under a unique name so it doesn't collide with the backend
+# Load the launcher under a unique name so it doesn't collide with the backend
 # `app` package. Only the pure helpers are exercised; the webview window is not.
-_PATH = Path(__file__).resolve().parents[2] / "desktop" / "app.py"
+_PATH = Path(__file__).resolve().parents[2] / "desktop" / "launcher.py"
 _spec = importlib.util.spec_from_file_location("desktop_launcher", _PATH)
 launcher = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(launcher)

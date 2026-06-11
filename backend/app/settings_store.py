@@ -21,7 +21,7 @@ _SERVICE = "ai-readiness-lab"
 _USERNAME = "anthropic_api_key"
 
 
-def _config_dir() -> Path:
+def config_dir() -> Path:
     """Per-user config dir; overridable with AIRL_CONFIG_DIR (used by tests)."""
     override = os.getenv("AIRL_CONFIG_DIR")
     if override:
@@ -36,7 +36,7 @@ def _config_dir() -> Path:
 
 
 def _fallback_file() -> Path:
-    return _config_dir() / "credentials.json"
+    return config_dir() / "credentials.json"
 
 
 def _use_keyring() -> bool:

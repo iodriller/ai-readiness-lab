@@ -18,6 +18,8 @@ vi.mock('../api/client', () => ({
     Promise.resolve({ has_api_key: false, key_hint: '', mode: 'sample', source: 'none' }),
   saveApiKey: vi.fn(),
   clearApiKey: vi.fn(),
+  // RecentReviews fetches the project list on mount.
+  listProjects: () => Promise.resolve([]),
 }))
 
 afterEach(() => {

@@ -2,7 +2,14 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createProject } from '../api/client'
 import type { CreateProjectRequest } from '../api/client'
+import RecentReviews from '../components/RecentReviews'
 import SettingsPanel from '../components/SettingsPanel'
+
+const STEPS = [
+  { n: '1', title: 'Tell us your company', body: 'Enter your company and role.' },
+  { n: '2', title: 'We research & brief you', body: 'Live market and competitor AI signals.' },
+  { n: '3', title: 'Ask & export', body: 'Follow-up questions and a shareable report.' },
+]
 
 const ROLES = ['CTO', 'CIO', 'CEO', 'COO', 'VP', 'Director', 'Transformation Lead', 'Consultant']
 
@@ -42,6 +49,18 @@ export default function IntakeScreen() {
         See where your company stands on AI, where competitors are moving, and which pilot is worth
         launching next.
       </p>
+
+      <ol className="mb-5 grid gap-3 sm:grid-cols-3">
+        {STEPS.map((step) => (
+          <li key={step.n} className="rounded-lg border border-slate-200 bg-white p-3">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white">
+              {step.n}
+            </div>
+            <p className="mt-2 text-sm font-medium text-slate-800">{step.title}</p>
+            <p className="text-xs text-slate-500">{step.body}</p>
+          </li>
+        ))}
+      </ol>
 
       <div className="mb-4">
         <SettingsPanel />
@@ -91,6 +110,8 @@ export default function IntakeScreen() {
         </button>
         {error && <p className="error">{error}</p>}
       </form>
+
+      <RecentReviews />
     </main>
   )
 }

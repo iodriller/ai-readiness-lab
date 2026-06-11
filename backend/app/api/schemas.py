@@ -12,6 +12,17 @@ class CreateProjectRequest(BaseModel):
     mode: Mode
 
 
+class ProjectSummary(BaseModel):
+    """A row in the 'recent reviews' list on the home screen."""
+
+    project_id: str
+    company_name: str
+    user_role: str
+    mode: str
+    status: str
+    created_at: str
+
+
 class BriefSource(BaseModel):
     """A credibility-tagged public source backing the brief (the Evidence panel)."""
 
