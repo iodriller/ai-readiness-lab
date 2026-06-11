@@ -10,6 +10,44 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 6 — Flow diagrams, UI-kit decision, DuckDuckGo + research budget
+
+**Done:**
+- **UI kit decision (user-confirmed):** adopt **AI Elements (shadcn/ui)** — copy-paste React
+  components owned in-repo (Conversation, Message, Reasoning, Tool/Task, Sources). Researched
+  online vs. assistant-ui; chose AI Elements for maximum extensibility + native streaming/step/
+  citation primitives. Adoption itself is scoped as new **Phase 3.5** (not built this turn).
+- **DuckDuckGo locked as the default** search provider (free, no key). `get_provider` docstring
+  clarified; Tavily/Serper remain opt-in via env key. `.env.example` updated.
+- **Deep-research budget:** added `RESEARCH_MAX_SOURCES` (100) + `RESEARCH_TIMEOUT_SECONDS` (600)
+  to `config.py`; orchestrator now wraps the parallel search in `asyncio.wait_for(timeout)` and
+  caps ranked sources at the budget — a run is always bounded; on a budget hit it synthesizes
+  from evidence gathered so far.
+- **`docs/ARCHITECTURE.md` (new):** three Mermaid diagrams — (1) technical flow intake→SSE→
+  orchestrator→DuckDuckGo→ranker→evidence JSON→Claude profiler/brief→SQLite, (2) user journey
+  (landing→live console→visual brief→drill-down/follow-up/export), (3) streaming "show your work"
+  sequence + the SSE event contract (`step` and `done` implemented; `interim`/`source` planned
+  for the Phase 3.5 console). All three validated by rendering with `mmdc` (puppeteer
+  `--no-sandbox`).
+- **`docs/IMPLEMENTATION_PLAN.md`:** status → Phases 0–3 complete; decisions table gains web-search,
+  research-budget, and UI-kit rows; open questions for provider + UI kit marked DECIDED; added
+  Phase 3.5 (Streaming Research Console); linked ARCHITECTURE.md.
+
+**Gaps / bugs found:**
+- `mmdc` (mermaid CLI) needs a puppeteer config with `--no-sandbox` to run as root in this
+  container. Not a syntax problem — note it for any future diagram validation.
+- The bounded-budget timeout is only wired around the current single-round parallel search. The
+  full iterative deep-research loop (fetch page bodies, expand to ~100 sources, emit live
+  `interim`/`source` events) is Phase 3.5/4 work — the config knobs and guard are in place for it.
+
+**What's left before Phase 4:** Build Phase 3.5 (AI Elements console + interim/source SSE events).
+
+**Next step:** Phase 3.5 — install Tailwind + shadcn, pull AI Elements into `src/components/ai/`,
+build the streaming console (step/interim/source feed + source counter) and a visual cited brief;
+emit `interim`/`source` events from the orchestrator. See `docs/ARCHITECTURE.md` event contract.
+
+---
+
 ### 2026-06-11 · Session 5 — Gap fixes + Phase 3: Research Orchestrator
 
 **Done:**

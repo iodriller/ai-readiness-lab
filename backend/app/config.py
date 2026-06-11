@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     tavily_api_key: str | None = None
     serper_api_key: str | None = None
 
+    # Deep-research budget: hard caps so a run is always bounded (spec: streaming
+    # research with a time limit). The orchestrator stops collecting once either
+    # limit is hit and synthesizes from whatever evidence it has gathered so far.
+    research_max_sources: int = 100
+    research_timeout_seconds: int = 600
+
 
 @lru_cache
 def get_settings() -> Settings:

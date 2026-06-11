@@ -67,6 +67,14 @@ def _create_llm():
     return AnthropicClient(s.anthropic_api_key)
 
 
+def _research_budget() -> tuple[int, int]:
+    """Return (max_sources, timeout_seconds) for one bounded research run."""
+    from app.config import get_settings
+
+    s = get_settings()
+    return s.research_max_sources, s.research_timeout_seconds
+
+
 def _store_brief(project_id: str, brief: BriefResponse | None) -> None:
     """Flip status to ready and persist brief (if available) in ProjectRow.payload."""
     with SessionLocal() as session:
@@ -97,7 +105,10 @@ async def run(project_id: str, company_name: str, mode: Mode) -> AsyncGenerator[
     yield _step_event(1, total, RESEARCH_STEPS[0])
     yield _step_event(2, total, RESEARCH_STEPS[1])
 
-    # Collect search results in parallel.
+    # Collect search results in parallel, bounded by the research budget
+    # (max sources + wall-clock timeout). If the budget is hit we synthesize
+    # from whatever evidence has been gathered so far rather than blocking.
+    max_sources, timeout_s = _research_budget()
     sources = []
     try:
         from app.research.query_planner import plan_queries
@@ -110,14 +121,16 @@ async def run(project_id: str, company_name: str, mode: Mode) -> AsyncGenerator[
                 return []
             return await asyncio.to_thread(provider.search, q, 5)
 
-        result_lists = await asyncio.gather(
-            *[_search(q) for q in queries.all_queries()],
-            return_exceptions=True,
+        result_lists = await asyncio.wait_for(
+            asyncio.gather(*[_search(q) for q in queries.all_queries()], return_exceptions=True),
+            timeout=timeout_s,
         )
         for r in result_lists:
             if not isinstance(r, Exception):
                 sources.extend(r)
-        sources = classify_and_rank(sources)
+        sources = classify_and_rank(sources)[:max_sources]
+    except TimeoutError:
+        log.warning("Research budget timeout (%ss) for project=%r", timeout_s, project_id)
     except Exception:
         log.warning("Search phase failed for project=%r", project_id, exc_info=True)
 

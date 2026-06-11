@@ -104,7 +104,12 @@ class DuckDuckGoProvider:
 
 
 def get_provider(tavily_api_key: str = "", serper_api_key: str = "") -> SearchProvider | None:
-    """Return the highest-priority available provider; None if nothing is usable."""
+    """Return a search provider.
+
+    DuckDuckGo is the default — free, open-source, no API key — so research works
+    out of the box. Tavily or Serper are used only when their key is set (opt-in
+    upgrades for higher-quality structured results).
+    """
     if tavily_api_key:
         return TavilyProvider(tavily_api_key)
     if serper_api_key:
