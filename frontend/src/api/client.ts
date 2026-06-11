@@ -2,13 +2,20 @@
 // schemas — run `npm run generate:types` after changing them. Do not hand-edit
 // src/api/types.ts.
 
-import type { BriefResponse, CreateProjectRequest, Project, StructuredAnswer } from './types'
+import type {
+  BriefResponse,
+  CreateProjectRequest,
+  Project,
+  SettingsStatus,
+  StructuredAnswer,
+} from './types'
 
 export type {
   BriefResponse,
   CreateProjectRequest,
   OpportunityCard,
   Project,
+  SettingsStatus,
   StructuredAnswer,
 } from './types'
 
@@ -75,6 +82,34 @@ export async function askQuestion(projectId: string, question: string): Promise<
     throw new Error(`qa failed: ${response.status}`)
   }
   return response.json() as Promise<StructuredAnswer>
+}
+
+export function getSettings(): Promise<SettingsStatus> {
+  return getJson<SettingsStatus>('/settings')
+}
+
+export async function saveApiKey(apiKey: string): Promise<SettingsStatus> {
+  const response = await fetch('/settings/api-key', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: apiKey }),
+  })
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((b) => b.detail)
+      .catch(() => null)
+    throw new Error(detail || `save key failed: ${response.status}`)
+  }
+  return response.json() as Promise<SettingsStatus>
+}
+
+export async function clearApiKey(): Promise<SettingsStatus> {
+  const response = await fetch('/settings/api-key', { method: 'DELETE' })
+  if (!response.ok) {
+    throw new Error(`clear key failed: ${response.status}`)
+  }
+  return response.json() as Promise<SettingsStatus>
 }
 
 interface ResearchHandlers {

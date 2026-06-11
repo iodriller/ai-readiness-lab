@@ -39,6 +39,7 @@ class StructuredAnswer(BaseModel):
 # Heuristic fallback (no LLM)
 # ---------------------------------------------------------------------------
 
+
 def _heuristic_answer(
     question: str, question_type: QuestionType, ctx: QAContext
 ) -> StructuredAnswer:
@@ -49,8 +50,7 @@ def _heuristic_answer(
     first_card = top_cards[0] if top_cards else None
 
     peer_signals = [
-        f"{s.company} ({s.peer_type.value.replace('_', ' ')}): {s.signal}"
-        for s in ctx.signals[:5]
+        f"{s.company} ({s.peer_type.value.replace('_', ' ')}): {s.signal}" for s in ctx.signals[:5]
     ]
 
     data_needed = (
@@ -168,9 +168,7 @@ def _signals_block(ctx: QAContext) -> str:
 
 
 def _pilots_block(ctx: QAContext) -> str:
-    return "\n".join(
-        f"- {c.name}: {c.executive_summary}" for c in ctx.opportunity_cards[:8]
-    )
+    return "\n".join(f"- {c.name}: {c.executive_summary}" for c in ctx.opportunity_cards[:8])
 
 
 def _history_block(ctx: QAContext) -> str:

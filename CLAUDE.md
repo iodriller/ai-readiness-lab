@@ -10,6 +10,58 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 11 — Desktop packaging + seamless in-app key setup
+
+**Goal (user):** make this consumable by a non-technical executive — a double-clickable install,
+no "you must have Python," and the most seamless possible way to supply an API key.
+
+**Research finding that shaped the design:** Anthropic's Feb 2026 policy explicitly prohibits OAuth
+("sign in with Claude") for any product other than Claude Code / claude.ai; products that
+authenticate end users must use **API-key auth via the Console**. So the compliant, self-contained,
+most-seamless path is **Bring-Your-Own-Key made frictionless** (paste once → stored in the OS
+keychain), with a one-click link to the Console and a zero-setup "explore with sample data" path.
+
+**Done:**
+- **One server serves everything.** FastAPI now mounts the built SPA (`frontend/dist`) at `/`
+  (`app/main._static_dir()` resolves the bundle dir, incl. PyInstaller `sys._MEIPASS`). Frontend
+  switched to `HashRouter` so all routing is client-side (`#/projects/:id`) — no deep-link route
+  config, no collision with the `/projects` API. Verified one server returns the SPA at `/` plus
+  `/health` and `/settings`.
+- **Native desktop app (pywebview).** `desktop/app.py` boots uvicorn on a free localhost port in a
+  daemon thread, waits for `/health`, then opens a native window (no browser, no terminal). Verified
+  end-to-end headlessly: server boots in-thread, serves SPA + API, reports healthy.
+- **Installer build.** `desktop/AIReadinessLab.spec` (PyInstaller, `console=False`, bundles the
+  runtime + backend + `frontend/dist`, macOS `.app` BUNDLE). `scripts/build_desktop.sh` for local
+  builds. `.github/workflows/release.yml` matrix builds Windows `.zip`, macOS `.dmg`, Linux
+  `.tar.gz` on a `v*` tag (or manual dispatch) and attaches them to a GitHub Release. Linux runner
+  installs GTK/WebKit for pywebview.
+- **Seamless key UX.** `app/settings_store.py` stores the key in the OS keychain via `keyring`
+  (Keychain / Credential Locker / Secret Service), with a 0600 file fallback for headless boxes;
+  the full secret is never returned to the UI (only a `…last4` hint). `app/api/settings.py`:
+  `GET /settings` (live/sample mode + masked hint + source), `PUT /settings/api-key` (validates the
+  `sk-ant-` prefix), `DELETE /settings/api-key`. `create_llm()`/`resolve_api_key()` prefer the
+  in-app key over env. Frontend `SettingsPanel`: a live/sample status banner on the landing screen +
+  a two-click modal to paste a key (links to the Console; "continue with sample data"; "remove saved
+  key"). So a packaged app is useful out of the box (sample) and one paste away from live research.
+- **Tests:** backend 112 (settings store roundtrip, settings API incl. masked-key + precedence,
+  static-dir resolver, desktop launcher helpers); frontend 15 (SettingsPanel banner/modal/save/error;
+  intake mounts it). Ruff/format, ESLint, tsc, Vite build all clean.
+
+**UX gaps still open (flagged for next rounds, by impact):**
+- **PDF/Markdown report export** — the spec's core promise (`docs/PRODUCT_SPEC.md` §13/§4.4);
+  `ReportPreview` is still a placeholder. Highest-value next UX piece.
+- **Onboarding/welcome step** — the landing screen now has the key banner; a short "how it works"
+  intro would further reduce cold-start for first-time execs.
+- **Project history / home** — projects aren't listed anywhere; a hard window close loses the path
+  to a prior brief. Add a `GET /projects` list + a home screen.
+- **First-run window polish** — app icon, splash while the server boots (currently a brief blank
+  window during the ~1s health wait), and signing/notarization so OS gatekeepers don't warn.
+
+**Next step:** build **PDF/Markdown report export** (the core deliverable), then onboarding +
+project history. After that, Phase 7 (Guided Pilot Drill-Down, spec §11).
+
+---
+
 ### 2026-06-11 · Session 10 — Phase 6 hardening: bug fixes + technical-debt cleanup
 
 **Done (make the implementation solid before Phase 7; prep a merge save-point):**
