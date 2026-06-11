@@ -2,9 +2,15 @@
 // schemas — run `npm run generate:types` after changing them. Do not hand-edit
 // src/api/types.ts.
 
-import type { BriefResponse, CreateProjectRequest, Project } from './types'
+import type { BriefResponse, CreateProjectRequest, Project, StructuredAnswer } from './types'
 
-export type { BriefResponse, CreateProjectRequest, OpportunityCard, Project } from './types'
+export type {
+  BriefResponse,
+  CreateProjectRequest,
+  OpportunityCard,
+  Project,
+  StructuredAnswer,
+} from './types'
 
 export interface Health {
   status: string
@@ -29,19 +35,6 @@ export interface SourceEvent {
   title: string
   source_type: string
   confidence: number
-}
-
-export interface StructuredAnswer {
-  question: string
-  question_type: string
-  direct_answer: string
-  why_it_matters: string
-  peer_signals: string[]
-  pilot_options: string[]
-  recommended_first_pilot: string
-  data_needed: string[]
-  risks_to_control: string[]
-  technical_questions: string[]
 }
 
 async function getJson<T>(path: string): Promise<T> {

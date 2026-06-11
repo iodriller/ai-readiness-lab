@@ -123,6 +123,16 @@ export type Title1 = string;
 export type SourceType1 = string;
 export type Confidence4 = number;
 export type Sources1 = BriefSource[];
+export type Question = string;
+export type QuestionType = string;
+export type DirectAnswer = string;
+export type WhyItMatters = string;
+export type PeerSignals = string[];
+export type PilotOptions = string[];
+export type RecommendedFirstPilot = string;
+export type DataNeeded = string[];
+export type RisksToControl = string[];
+export type TechnicalQuestions = string[];
 
 export interface AIReadinessLabModels {
   Project?: Project;
@@ -135,6 +145,7 @@ export interface AIReadinessLabModels {
   ReadinessScorecard?: ReadinessScorecard;
   CreateProjectRequest?: CreateProjectRequest;
   BriefResponse?: BriefResponse;
+  StructuredAnswer?: StructuredAnswer;
 }
 export interface Project {
   project_id?: ProjectId;
@@ -311,4 +322,16 @@ export interface BriefSource {
   title?: Title1;
   source_type: SourceType1;
   confidence: Confidence4;
+}
+export interface StructuredAnswer {
+  question: Question;
+  question_type: QuestionType;
+  direct_answer: DirectAnswer;
+  why_it_matters: WhyItMatters;
+  peer_signals: PeerSignals;
+  pilot_options: PilotOptions;
+  recommended_first_pilot: RecommendedFirstPilot;
+  data_needed: DataNeeded;
+  risks_to_control: RisksToControl;
+  technical_questions: TechnicalQuestions;
 }

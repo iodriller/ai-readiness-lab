@@ -1,5 +1,7 @@
 """Tests for the Q&A package — classifier, composer, and API contract."""
 
+from datetime import datetime, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -30,6 +32,9 @@ def client(monkeypatch):
     monkeypatch.setattr(orchestrator, "STEP_DELAY_SECONDS", 0.0)
     monkeypatch.setattr(orchestrator, "_create_provider", lambda: None)
     monkeypatch.setattr(orchestrator, "_create_llm", lambda: None)
+    # Force the deterministic heuristic path so the Q&A contract tests never
+    # depend on a configured key or make a network call.
+    monkeypatch.setattr("app.qa.router.create_llm", lambda: None)
     app.dependency_overrides[get_session] = override_session
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -82,7 +87,6 @@ def _make_context() -> QAContext:
     return QAContext(
         company_name="Acme",
         profile=profile,
-        peers=[],
         signals=[],
         opportunity_cards=[],
         prior_answers=[],
@@ -162,3 +166,80 @@ def test_qa_history_persists_across_calls(client):
     # by confirming the second call still works correctly.
     r = client.post(f"/projects/{project_id}/qa", json={"question": "Third question"})
     assert r.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Retriever — reads a real stored profile (regression: competitive_ai_signals)
+# ---------------------------------------------------------------------------
+
+def _session_factory():
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(bind=engine)
+    return sessionmaker(bind=engine, expire_on_commit=False)
+
+
+def test_gather_context_reads_stored_profile_signals():
+    """A stored profile's competitive_ai_signals must reach the QA context.
+
+    Regression: the retriever previously read a non-existent `competitive_signals`
+    attribute, which raised AttributeError whenever a real profile was present.
+    """
+    from app.db.models import ProjectRow
+    from app.models.company import CompanyIdentity, CompanyIntelligenceProfile
+    from app.models.competitive import CompetitiveSignal
+    from app.qa.retriever import gather_context
+
+    profile = CompanyIntelligenceProfile(
+        company_identity=CompanyIdentity(name="Occidental", industry="oil_gas"),
+        competitive_ai_signals=[
+            CompetitiveSignal(
+                company="SLB",
+                peer_type="service_company",
+                signal="AI drilling platform",
+                ai_area="drilling",
+                business_relevance="ecosystem signal",
+                fomo_strength="medium",
+                confidence=0.7,
+            )
+        ],
+    )
+    factory = _session_factory()
+    with factory() as session:
+        session.add(
+            ProjectRow(
+                project_id="p1",
+                company_name="Occidental",
+                user_role="CTO",
+                mode="discover_opportunities",
+                status="ready",
+                created_at=datetime.now(timezone.utc),
+                payload={"profile": profile.model_dump(mode="json")},
+            )
+        )
+        session.commit()
+
+        ctx = gather_context("p1", session)
+        assert ctx is not None
+        assert ctx.profile is not None
+        assert len(ctx.signals) == 1
+        assert ctx.signals[0].company == "SLB"
+
+
+def test_history_block_summarizes_prior_answers():
+    from app.qa.composer import _history_block
+
+    ctx = _make_context()
+    ctx.prior_answers = [
+        {"question": "First?", "answer": {"direct_answer": "Start with knowledge assistant."}},
+    ]
+    block = _history_block(ctx)
+    assert "First?" in block
+    assert "knowledge assistant" in block
+
+
+def test_history_block_empty_when_no_history():
+    from app.qa.composer import _history_block
+
+    assert "first question" in _history_block(_make_context()).lower()

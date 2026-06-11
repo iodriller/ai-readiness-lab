@@ -115,6 +115,9 @@ PEER AND COMPETITIVE SIGNALS (from public sources only — do not invent):
 AVAILABLE PILOT OPTIONS (from curated library — only name these, do not invent new ones):
 {pilots_block}
 
+PRIOR Q&A IN THIS SESSION (for continuity — do not repeat verbatim):
+{history_block}
+
 Return a JSON object exactly matching this schema (no markdown fences):
 {{
   "question": "<the original question>",
@@ -170,6 +173,18 @@ def _pilots_block(ctx: QAContext) -> str:
     )
 
 
+def _history_block(ctx: QAContext) -> str:
+    if not ctx.prior_answers:
+        return "None — this is the first question."
+    lines: list[str] = []
+    for turn in ctx.prior_answers[-3:]:
+        question = turn.get("question", "")
+        answer = turn.get("answer", {})
+        direct = answer.get("direct_answer", "") if isinstance(answer, dict) else ""
+        lines.append(f"- Q: {question}\n  A: {direct}")
+    return "\n".join(lines)
+
+
 def compose_answer(
     question: str,
     question_type: QuestionType,
@@ -187,6 +202,7 @@ def compose_answer(
         context_block=_context_block(ctx),
         signals_block=_signals_block(ctx),
         pilots_block=_pilots_block(ctx),
+        history_block=_history_block(ctx),
     )
 
     try:

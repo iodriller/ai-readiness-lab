@@ -33,6 +33,8 @@ test('submits a question and renders the structured answer', async () => {
   // The name appears in both pilot options and recommended first pilot — both present.
   expect(screen.getAllByText(/enterprise knowledge assistant/i).length).toBeGreaterThanOrEqual(1)
   expect(screen.getByText(/opportunity seeking/i)).toBeInTheDocument()
+  // Section heading renders a literal ampersand, not an HTML entity.
+  expect(screen.getByText('Peer & industry signals')).toBeInTheDocument()
 })
 
 test('Ask button is disabled when input is empty', () => {

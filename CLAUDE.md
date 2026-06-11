@@ -10,6 +10,40 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 10 — Phase 6 hardening: bug fixes + technical-debt cleanup
+
+**Done (make the implementation solid before Phase 7; prep a merge save-point):**
+- **BUG (real, would crash in production): wrong profile field in the Q&A retriever.**
+  `retriever.gather_context` read `profile.competitive_signals`, but the model field is
+  `competitive_ai_signals` (every other call site uses the correct name). Any project with a
+  stored profile would raise `AttributeError` on the first question. The Phase 6 tests missed it
+  because they only exercised the no-profile path. Fixed the field and added
+  `test_gather_context_reads_stored_profile_signals` — a regression test that stores a real
+  profile with a `CompetitiveSignal` and asserts it reaches the QA context.
+- **Documented gap closed: prior Q&A now feeds the composer prompt.** Added `_history_block()`
+  (last 3 turns, question + direct answer) and a `PRIOR Q&A IN THIS SESSION` section to the LLM
+  prompt, so multi-turn questions have continuity. Tests `test_history_block_*` cover the empty
+  and populated cases.
+- **Dead code removed:** `QAContext.peers` was gathered but never consumed (the competitive
+  signals already carry the peer relationship the answer surfaces). Dropped the field, its
+  gathering, and the now-unused `PeerClassification` import — keeps the context minimal.
+- **Duplication + config-bypass fixed:** the orchestrator read the key via `get_settings()` while
+  the Q&A router read `os.getenv("ANTHROPIC_API_KEY")` directly (two ways to do one thing; the
+  router bypassed the config layer). Added one `create_llm()` factory in `app/llm/client.py`;
+  both call sites use it. The Q&A test fixture force-patches it to `None` so contract tests are
+  deterministic and never touch the network regardless of environment.
+- **Single-source-of-truth restored for the TS type:** `StructuredAnswer` was hand-written in
+  `client.ts`. Added it to `app/models/export.py`, regenerated `schema.json` + `types.ts`, and
+  re-exported the generated interface from `client.ts` — matching how `BriefResponse` flows.
+- **Frontend nit:** a section heading used the `&amp;` HTML entity inside a JSX prop; replaced
+  with a literal `&` and locked it with an assertion.
+- **Tests:** backend 100 (was 97), frontend 12. Ruff, ESLint, tsc, and Vite build all clean.
+
+**What's left:** Nothing blocking — this was a hardening/save-point pass. Phase 7 (Guided Pilot
+Drill-Down, spec §11) is the next feature.
+
+---
+
 ### 2026-06-11 · Session 9 — Phase 6: Open-Ended Executive Strategy Q&A
 
 **Done:**
