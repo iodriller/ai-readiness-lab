@@ -51,7 +51,9 @@ jobs:
           sudo apt-get install -y libgtk-3-0 libwebkit2gtk-4.1-0 gir1.2-webkit2-4.1
 
       - name: Install build deps
-        run: pip install -r backend/requirements.txt -r backend/requirements-desktop.txt
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -r backend/requirements.txt -r backend/requirements-desktop.txt
 
       - name: Bundle with PyInstaller
         run: pyinstaller desktop/AIReadinessLab.spec --noconfirm --clean
