@@ -11,7 +11,7 @@ FastAPI backend, and the built single-page UI. No Python install on the target.
 import sys
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 ROOT = Path(SPECPATH).resolve().parent
 sys.path.insert(0, str(ROOT / "backend"))
@@ -20,10 +20,13 @@ hiddenimports = []
 for pkg in ("uvicorn", "anthropic", "keyring", "keyring.backends", "app"):
     hiddenimports += collect_submodules(pkg)
 
+# Bundle the built UI plus the backend package's data files (e.g. the
+# opportunity library.json), preserving their package-relative paths.
 datas = [(str(ROOT / "frontend" / "dist"), "frontend_dist")]
+datas += collect_data_files("app")
 
 a = Analysis(
-    [str(ROOT / "desktop" / "app.py")],
+    [str(ROOT / "desktop" / "launcher.py")],
     pathex=[str(ROOT / "backend")],
     binaries=[],
     datas=datas,

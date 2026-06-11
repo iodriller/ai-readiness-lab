@@ -10,6 +10,73 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 13 — UX gaps: report export, project history, onboarding
+
+**Done (closed the flagged UX gaps):**
+- **PDF + Markdown report export (the spec's core promise, §4.4/§13).** New `app/report/generator.py`:
+  `render_markdown()` (full Unicode) and `render_pdf()` (fpdf2 — pure-Python, no native deps, bundles
+  cleanly; Unicode punctuation sanitized to the core-font charset). Endpoints
+  `GET /projects/{id}/report.md` and `/report.pdf` stream the brief + opportunity cards + Q&A as a
+  download (Content-Disposition attachment). Frontend `ReportPreview` is no longer a placeholder —
+  it offers real **Download PDF / Download Markdown** buttons.
+- **Project history / home.** `GET /projects` lists past reviews (newest first, `ProjectSummary`).
+  Frontend `RecentReviews` renders them on the landing screen as links back into each brief, so a
+  closed window no longer loses prior work.
+- **Onboarding strip.** A compact 3-step "how it works" (company → research/brief → ask & export)
+  on the landing screen so a first-time exec isn't dropped cold into a form.
+- **Tests:** backend 120 (report generator MD/PDF incl. Unicode + sample flag; list + report
+  endpoint contracts incl. 404). frontend 18 (ReportPreview download links; RecentReviews list +
+  empty). Verified end-to-end through the app: report.md/report.pdf/list/SPA all 200. Ruff/format,
+  ESLint, tsc, Vite build clean.
+
+**Remaining polish (lower impact):** first-run window icon + boot splash; signing/notarization so
+OS gatekeepers don't warn; a unicode TTF in the PDF (currently sanitized to latin-1).
+
+**Next:** Phase 7 — Guided Pilot Drill-Down (spec §11).
+
+---
+
+### 2026-06-11 · Session 12 — CI triage + desktop-bundle hardening (real bugs found via a local build)
+
+**CI status:** the "entire CI is broken" report was the wall of red from earlier Phase 6 runs —
+`ruff format --check .` failed because `app/qa/classifier.py`, `app/qa/composer.py`, and
+`tests/test_qa.py` weren't formatted (I'd run `ruff check` but not `ruff format`). A later commit
+reformatted them, so **`ci.yml` on `main` is green again** (verified locally:
+`ruff format --check` = "58 files already formatted", `ruff check` clean, 112 backend + 15 frontend
+tests pass). The release workflow had never run.
+
+**Built the desktop app locally (PyInstaller) and found real bundling bugs the dev path hid:**
+- **Entry-script name collision (would crash every packaged app):** the launcher was
+  `desktop/app.py`, so PyInstaller named the entry module `app`, which *shadowed the backend `app`
+  package* — `import app.main` failed with "app is not a package". Renamed to `desktop/launcher.py`.
+- **Missing package data:** `app/opportunity/data/library.json` wasn't bundled (collect_submodules
+  only grabs `.py`). Added `collect_data_files("app")` to the spec; verified the JSON lands at
+  `_internal/app/opportunity/data/library.json`.
+- **Non-writable DB in a packaged app:** the default `sqlite:///./…` is relative to cwd, which can
+  be read-only (macOS `.app`). `launcher.ensure_writable_db()` points `DATABASE_URL` at the
+  per-user config dir when `sys.frozen`.
+- **No field diagnostics + console=False gotcha:** a windowed build has no console and
+  `sys.stdout/stderr` are `None`. Added `_setup_logging()` → `config_dir/launch.log` and a
+  stdout/stderr redirect so nothing can crash/hang on a None stream.
+- **uvicorn-under-PyInstaller robustness:** forced `loop="asyncio"`, `http="h11"` (uvicorn's "auto"
+  imports native uvloop/httptools that don't bundle cleanly). Added a **browser fallback** in
+  `main()` when `webview` isn't importable, so the app always works.
+- `config_dir()` made public in `settings_store`; `test_desktop_launcher.py` repointed to
+  `launcher.py`.
+
+**Verified:** the build succeeds and bundles `app.main`, `library.json`, and `frontend_dist`; the
+**non-frozen** launcher boots and serves SPA + API + brief end-to-end. **Could not** exercise the
+*frozen* binary's runtime in this sandbox — it hangs in `uvicorn.Server.run()` after "starting
+server", consistent with this container's demonstrated hostility to frozen binaries (cryptography
+rust `PanicException`, `proxy-tools` wheel build failure). The forced asyncio/h11 + stdio fixes are
+the standard remedies for this on real machines / GitHub runners; flagged as the one piece not
+locally validated end-to-end.
+
+**Next:** address the UX gaps — PDF/Markdown report export (core promise), onboarding, project
+history.
+
+---
+
 ### 2026-06-11 · Session 11 — Desktop packaging + seamless in-app key setup
 
 **Goal (user):** make this consumable by a non-technical executive — a double-clickable install,

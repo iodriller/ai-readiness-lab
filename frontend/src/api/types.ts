@@ -137,6 +137,12 @@ export type HasApiKey = boolean;
 export type KeyHint = string;
 export type Mode1 = string;
 export type Source = string;
+export type ProjectId1 = string;
+export type CompanyName4 = string;
+export type UserRole2 = string;
+export type Mode2 = string;
+export type Status = string;
+export type CreatedAt1 = string;
 
 export interface AIReadinessLabModels {
   Project?: Project;
@@ -151,6 +157,7 @@ export interface AIReadinessLabModels {
   BriefResponse?: BriefResponse;
   StructuredAnswer?: StructuredAnswer;
   SettingsStatus?: SettingsStatus;
+  ProjectSummary?: ProjectSummary;
 }
 export interface Project {
   project_id?: ProjectId;
@@ -345,4 +352,15 @@ export interface SettingsStatus {
   key_hint: KeyHint;
   mode: Mode1;
   source: Source;
+}
+/**
+ * A row in the 'recent reviews' list on the home screen.
+ */
+export interface ProjectSummary {
+  project_id: ProjectId1;
+  company_name: CompanyName4;
+  user_role: UserRole2;
+  mode: Mode2;
+  status: Status;
+  created_at: CreatedAt1;
 }

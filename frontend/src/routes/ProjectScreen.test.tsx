@@ -10,6 +10,8 @@ const getBrief = vi.fn()
 vi.mock('../api/client', () => ({
   subscribeResearch: (...args: unknown[]) => subscribeResearch(...args),
   getBrief: (...args: unknown[]) => getBrief(...args),
+  // Brief → ReportPreview builds download URLs from this.
+  reportUrl: (id: string, fmt: string) => `/projects/${id}/report.${fmt}`,
 }))
 
 afterEach(() => vi.clearAllMocks())

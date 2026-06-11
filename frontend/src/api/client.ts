@@ -6,6 +6,7 @@ import type {
   BriefResponse,
   CreateProjectRequest,
   Project,
+  ProjectSummary,
   SettingsStatus,
   StructuredAnswer,
 } from './types'
@@ -15,6 +16,7 @@ export type {
   CreateProjectRequest,
   OpportunityCard,
   Project,
+  ProjectSummary,
   SettingsStatus,
   StructuredAnswer,
 } from './types'
@@ -70,6 +72,15 @@ export async function createProject(request: CreateProjectRequest): Promise<Proj
 
 export function getBrief(projectId: string): Promise<BriefResponse> {
   return getJson<BriefResponse>(`/projects/${projectId}/brief`)
+}
+
+export function listProjects(): Promise<ProjectSummary[]> {
+  return getJson<ProjectSummary[]>('/projects')
+}
+
+/** Download URLs for the exportable report (served with Content-Disposition). */
+export function reportUrl(projectId: string, format: 'md' | 'pdf'): string {
+  return `/projects/${projectId}/report.${format}`
 }
 
 export async function askQuestion(projectId: string, question: string): Promise<StructuredAnswer> {
