@@ -10,6 +10,32 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 13 — UX gaps: report export, project history, onboarding
+
+**Done (closed the flagged UX gaps):**
+- **PDF + Markdown report export (the spec's core promise, §4.4/§13).** New `app/report/generator.py`:
+  `render_markdown()` (full Unicode) and `render_pdf()` (fpdf2 — pure-Python, no native deps, bundles
+  cleanly; Unicode punctuation sanitized to the core-font charset). Endpoints
+  `GET /projects/{id}/report.md` and `/report.pdf` stream the brief + opportunity cards + Q&A as a
+  download (Content-Disposition attachment). Frontend `ReportPreview` is no longer a placeholder —
+  it offers real **Download PDF / Download Markdown** buttons.
+- **Project history / home.** `GET /projects` lists past reviews (newest first, `ProjectSummary`).
+  Frontend `RecentReviews` renders them on the landing screen as links back into each brief, so a
+  closed window no longer loses prior work.
+- **Onboarding strip.** A compact 3-step "how it works" (company → research/brief → ask & export)
+  on the landing screen so a first-time exec isn't dropped cold into a form.
+- **Tests:** backend 120 (report generator MD/PDF incl. Unicode + sample flag; list + report
+  endpoint contracts incl. 404). frontend 18 (ReportPreview download links; RecentReviews list +
+  empty). Verified end-to-end through the app: report.md/report.pdf/list/SPA all 200. Ruff/format,
+  ESLint, tsc, Vite build clean.
+
+**Remaining polish (lower impact):** first-run window icon + boot splash; signing/notarization so
+OS gatekeepers don't warn; a unicode TTF in the PDF (currently sanitized to latin-1).
+
+**Next:** Phase 7 — Guided Pilot Drill-Down (spec §11).
+
+---
+
 ### 2026-06-11 · Session 12 — CI triage + desktop-bundle hardening (real bugs found via a local build)
 
 **CI status:** the "entire CI is broken" report was the wall of red from earlier Phase 6 runs —

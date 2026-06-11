@@ -57,7 +57,7 @@ export default function Brief({
 
       <QAPanel projectId={projectId} />
 
-      <ReportPreview />
+      <ReportPreview projectId={projectId} />
     </div>
   )
 }
