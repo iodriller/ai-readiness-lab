@@ -106,6 +106,15 @@ export type UserAdoption = number;
 export type Blockers = string[];
 export type Strengths = string[];
 export type NextActions = string[];
+export type CompanyName2 = string;
+export type UserRole1 = string;
+export type CompanyName3 = string;
+export type IsSample = boolean;
+export type WhatMatters = string;
+export type CompetitivePressure1 = string;
+export type TheOpening = string;
+export type RecommendedNextMove = string;
+export type Opportunities = OpportunityCard[];
 
 export interface AIReadinessLabModels {
   Project?: Project;
@@ -115,6 +124,8 @@ export interface AIReadinessLabModels {
   CompetitiveSignal?: CompetitiveSignal;
   OpportunityCard?: OpportunityCard;
   ReadinessScorecard?: ReadinessScorecard;
+  CreateProjectRequest?: CreateProjectRequest;
+  BriefResponse?: BriefResponse;
 }
 export interface Project {
   project_id?: ProjectId;
@@ -248,4 +259,25 @@ export interface ReadinessDimensions {
   integration_feasibility: IntegrationFeasibility;
   operational_ownership: OperationalOwnership;
   user_adoption: UserAdoption;
+}
+export interface CreateProjectRequest {
+  company_name: CompanyName2;
+  user_role: UserRole1;
+  mode: Mode;
+}
+/**
+ * Executive AI Readiness Brief (spec §4.4).
+ *
+ * Phase 2 serves illustrative sample content so the shell is fully navigable;
+ * real research replaces it in Phase 3. Text is framed as illustrative and
+ * makes no factual claims about the company.
+ */
+export interface BriefResponse {
+  company_name: CompanyName3;
+  is_sample: IsSample;
+  what_matters: WhatMatters;
+  competitive_pressure: CompetitivePressure1;
+  the_opening: TheOpening;
+  recommended_next_move: RecommendedNextMove;
+  opportunities: Opportunities;
 }

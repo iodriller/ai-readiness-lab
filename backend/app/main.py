@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.api.projects import router as projects_router
 from app.db.base import init_db
 
 
@@ -12,6 +13,7 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="AI Readiness Lab API", version="0.1.0", lifespan=lifespan)
+app.include_router(projects_router)
 
 
 @app.get("/health")

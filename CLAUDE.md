@@ -10,6 +10,49 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 4 — Phase 2: Executive Shell
+
+**Done:**
+- Backend API (`app/api/`): `POST /projects` (create + persist), `GET /projects/{id}`,
+  `GET /projects/{id}/research/stream` (SSE mock job emitting the 8 spec §4.3 steps,
+  then flips status → ready), `GET /projects/{id}/brief` (illustrative sample brief).
+  Request/response schemas in `app/api/schemas.py`; sample content in `app/api/sample.py`
+  (clearly flagged `is_sample`, asserts no company facts — respects no-hallucination rule).
+- Router wired into `main.py`; API schemas added to the TS type export.
+- Frontend (proper React): `react-router-dom` routing — `IntakeScreen` (company/role/mode,
+  no technical knobs) → `ProjectScreen` (subscribes to SSE, shows `ResearchProgress`, then
+  `Brief` with `OpportunityCardView` grid + `ReportPreview` placeholder). Typed client
+  extended with `createProject`, `getBrief`, `subscribeResearch` (EventSource). `index.css`
+  for a clean executive surface.
+- Tests: backend 22 pass (5 new API/SSE contract tests); frontend 5 pass (intake, brief,
+  progress). Typecheck + lint + build green. Verified the whole flow against a live uvicorn
+  server (create → stream → ready → brief with 4 opportunities).
+
+**Gaps / bugs found:**
+- In-memory SQLite gives each connection its own DB; TestClient runs sync endpoints in a
+  threadpool, so tables were missing. Fixed with `StaticPool` (shared connection) in the
+  API test fixture. Use that pattern for any future TestClient+SQLite tests.
+- SSE completion and merge-conflict-style transitions aren't delivered as events; the client
+  detects done via a `{"type":"done"}` sentinel then closes the EventSource to avoid the
+  browser's auto-reconnect. Keep that sentinel when the real research job replaces the mock.
+- React Router v6 prints v7 future-flag warnings in tests (harmless). Opt into the flags or
+  upgrade to v7 when convenient.
+- UI mode selector exposes 3 modes (matches the `Mode` enum); the spec §4.2 mock shows a 4th
+  ("Compare against competitors"). Left at 3 to avoid inventing an enum value — reconcile in spec.
+- `EventSource` isn't exercised in jsdom tests (SSE is covered by the backend contract test +
+  the live smoke test). An integration test for `ProjectScreen` could mock `subscribeResearch`.
+
+**What's left in Phase 2:** Nothing blocking — acceptance met (a non-developer can click the
+whole journey on mock data; no technical settings are visible by default).
+
+**Next step (Phase 3 — Research Orchestrator):** Replace the mock SSE job with real research —
+query planner (spec §7.3), source collector + ranker (§7.4), company profiler and AI-signal
+extractor producing a populated `CompanyIntelligenceProfile` with per-claim `source_refs` +
+confidence. Decide the web-search provider first (open question in the plan). See
+`docs/IMPLEMENTATION_PLAN.md` Phase 3.
+
+---
+
 ### 2026-06-11 · Session 3 — Phase 1: Domain Contracts (Schemas First)
 
 **Done:**

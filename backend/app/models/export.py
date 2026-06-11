@@ -12,21 +12,25 @@ from pathlib import Path
 
 from pydantic.json_schema import models_json_schema
 
+from app.api.schemas import BriefResponse, CreateProjectRequest
 from app.models import TOP_LEVEL_MODELS
+
+# Domain models plus the API request/response schemas the frontend consumes.
+_EXPORTED_MODELS = [*TOP_LEVEL_MODELS, CreateProjectRequest, BriefResponse]
 
 _OUTPUT = Path(__file__).resolve().parents[2] / "schema.json"
 
 
 def build_schema() -> dict:
     _, bundle = models_json_schema(
-        [(model, "validation") for model in TOP_LEVEL_MODELS],
+        [(model, "validation") for model in _EXPORTED_MODELS],
         title="AIReadinessLabModels",
     )
-    # Reference each top-level model from the root so the TypeScript generator
-    # emits a named interface for every one (json2ts skips unreferenced $defs).
+    # Reference each model from the root so the TypeScript generator emits a
+    # named interface for every one (json2ts skips unreferenced $defs).
     bundle["type"] = "object"
     bundle["properties"] = {
-        model.__name__: {"$ref": f"#/$defs/{model.__name__}"} for model in TOP_LEVEL_MODELS
+        model.__name__: {"$ref": f"#/$defs/{model.__name__}"} for model in _EXPORTED_MODELS
     }
     return bundle
 
