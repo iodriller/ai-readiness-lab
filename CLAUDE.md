@@ -10,6 +10,51 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 9 — Phase 6: Open-Ended Executive Strategy Q&A
+
+**Done:**
+- **Backend `app/qa/` package (spec §10):**
+  - `classifier.py`: `QuestionType` enum (5 classes: `opportunity_seeking`, `comparison`, `risk`,
+    `sequencing`, `technical`) + rule-based `classify(question)` — fast, predictable, no LLM.
+  - `retriever.py`: `QAContext` dataclass + `gather_context(project_id, session)` — pulls
+    profile, peer classifications, competitive signals, scored opportunity cards, and prior Q&A
+    history from the project's stored payload.
+  - `composer.py`: `StructuredAnswer` (9-field Pydantic model matching spec §10 fields:
+    `direct_answer`, `why_it_matters`, `peer_signals`, `pilot_options`, `recommended_first_pilot`,
+    `data_needed`, `risks_to_control`, `technical_questions`). LLM path uses a structured prompt
+    with the resolved context; heuristic fallback when no LLM. No-hallucination guard: peer names
+    only appear when a real `CompetitiveSignal` backs them; pilot options only come from the
+    scored opportunity library.
+  - `router.py`: `POST /projects/{id}/qa` → `StructuredAnswer`. History persisted to
+    `ProjectRow.payload["qa_history"]` so future questions have prior-answer context.
+- **Frontend `QAPanel` component:** question input + nine-field structured answer card (type
+  label, direct answer, why it matters, peer signals, pilot options, recommended first pilot
+  highlight, data needed, risks to control, technical questions). Wired into `Brief.tsx` below
+  the opportunity grid. `askQuestion()` added to the typed API client with `StructuredAnswer`
+  interface.
+- **Tests:** 18 new backend tests in `test_qa.py` (classifier parametrized across 11 cases,
+  heuristic fallback shape + no-invented-peers guard, compose_answer null-LLM path, API
+  contract: 200 shape, 404, 422, history persistence). 3 new frontend tests for `QAPanel`
+  (submit → answer card, disabled empty input, error state). 97 backend + 12 frontend total,
+  all passing. Ruff, ESLint, tsc, Vite build all clean.
+
+**Gaps / bugs found:**
+- `qa_history` is stored and available to the retriever context dict, but the composer prompt
+  currently doesn't inject prior Q&A turns. Add `PRIOR ANSWERS:` block to the prompt when
+  multi-turn conversation quality becomes important (Phase 7+).
+- The heuristic fallback always uses the same generic `why_it_matters` sentence regardless of
+  question type. Fine for now — LLM path customizes it properly.
+
+**What's left in Phase 6:** Nothing blocking — core acceptance met: exec can type a question on
+the brief screen and receive a structured, nine-field grounded answer (§10 format) with no
+invented peer names.
+
+**Next step (Phase 7 — Guided Pilot Drill-Down, spec §11):** After the executive picks an
+opportunity, the app asks 7 plain-English questions, then produces a readiness assessment and
+technical-leader checklist. See `docs/IMPLEMENTATION_PLAN.md` Phase 7.
+
+---
+
 ### 2026-06-11 · Session 8 — Gap fixes + Phase 4 (Peer Taxonomy) + Phase 5 (Opportunity Map)
 
 **Done:**
