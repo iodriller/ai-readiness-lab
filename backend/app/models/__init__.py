@@ -16,7 +16,7 @@ from app.models.base import (
     TimeToPilot,
 )
 from app.models.company import CompanyIntelligenceProfile
-from app.models.competitive import CompetitiveSignal
+from app.models.competitive import CompetitiveSignal, PeerClassification
 from app.models.opportunity import OpportunityCard
 from app.models.project import CompanyResearchPlan, Project, SourceRequirements
 from app.models.readiness import ReadinessDimensions, ReadinessScorecard
@@ -29,6 +29,7 @@ TOP_LEVEL_MODELS = [
     SourceRecord,
     CompanyIntelligenceProfile,
     CompetitiveSignal,
+    PeerClassification,
     OpportunityCard,
     ReadinessScorecard,
 ]
@@ -45,6 +46,7 @@ __all__ = [
     "TimeToPilot",
     "CompanyIntelligenceProfile",
     "CompetitiveSignal",
+    "PeerClassification",
     "OpportunityCard",
     "CompanyResearchPlan",
     "Project",

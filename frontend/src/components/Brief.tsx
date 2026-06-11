@@ -1,5 +1,6 @@
 import type { BriefResponse, SourceEvent } from '../api/client'
 import { Sources } from './ai/Sources'
+import type { SourceLike } from './ai/Sources'
 import OpportunityCardView from './OpportunityCardView'
 import ReportPreview from './ReportPreview'
 
@@ -10,6 +11,9 @@ export default function Brief({
   brief: BriefResponse
   sources?: SourceEvent[]
 }) {
+  // Prefer the evidence persisted on the brief (survives reload); fall back to the
+  // sources collected live during this session.
+  const evidence: SourceLike[] = brief.sources?.length ? brief.sources : sources
   return (
     <div className="brief">
       <header className="brief-header">
@@ -41,10 +45,10 @@ export default function Brief({
         </div>
       </section>
 
-      {sources.length > 0 && (
+      {evidence.length > 0 && (
         <section className="evidence">
           <h2>Evidence</h2>
-          <Sources sources={sources} title={`${sources.length} public sources reviewed`} />
+          <Sources sources={evidence} title={`${evidence.length} public sources reviewed`} />
         </section>
       )}
 

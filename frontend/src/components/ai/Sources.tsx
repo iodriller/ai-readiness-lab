@@ -1,8 +1,15 @@
-import type { SourceEvent } from '../../api/client'
 import { cn } from '../../lib/utils'
 
 // AI Elements-style Sources panel: a live count badge + a credibility-tagged list.
 // Colors follow the backend SourceType confidence hierarchy (filing > official > …).
+// Accepts any source-like row (live SourceEvent or a persisted BriefSource).
+
+export interface SourceLike {
+  url: string
+  title?: string
+  source_type: string
+  confidence: number
+}
 
 const TYPE_COLOR: Record<string, string> = {
   filing: 'bg-emerald-100 text-emerald-700',
@@ -15,7 +22,7 @@ const TYPE_COLOR: Record<string, string> = {
   blog: 'bg-slate-100 text-slate-500',
 }
 
-export function Sources({ sources, title = 'Sources gathered' }: { sources: SourceEvent[]; title?: string }) {
+export function Sources({ sources, title = 'Sources gathered' }: { sources: SourceLike[]; title?: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-center justify-between">

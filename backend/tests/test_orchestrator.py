@@ -27,11 +27,13 @@ def _disable_external(monkeypatch):
     monkeypatch.setattr(orchestrator, "_create_llm", lambda: None)
     stored: dict = {}
 
-    def _fake_store(project_id, brief):
+    def _fake_store(project_id, brief, profile=None, classifications=None):
         stored["brief"] = brief
         stored["project_id"] = project_id
+        stored["profile"] = profile
+        stored["classifications"] = classifications
 
-    monkeypatch.setattr(orchestrator, "_store_brief", _fake_store)
+    monkeypatch.setattr(orchestrator, "_store_results", _fake_store)
     return stored
 
 

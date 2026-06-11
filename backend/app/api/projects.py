@@ -10,7 +10,7 @@ from app.api.sample import sample_brief
 from app.api.schemas import BriefResponse, CreateProjectRequest
 from app.db.base import get_session
 from app.db.models import ProjectRow
-from app.models import Project
+from app.models import CompanyIntelligenceProfile, PeerClassification, Project
 from app.models.base import Mode
 from app.research import orchestrator
 
@@ -80,3 +80,26 @@ def get_brief(project_id: str, session: Session = Depends(get_session)) -> Brief
     if stored:
         return BriefResponse.model_validate(stored)
     return sample_brief(row.company_name)
+
+
+@router.get("/{project_id}/peers", response_model=list[PeerClassification])
+def get_peers(project_id: str, session: Session = Depends(get_session)) -> list[PeerClassification]:
+    """Peer classifications with stated reasons — the 'why is X a vendor not a
+    competitor?' explanation (spec §3.3). Empty until research with an LLM runs."""
+    row = session.get(ProjectRow, project_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="project not found")
+    return [PeerClassification.model_validate(p) for p in row.payload.get("peers", [])]
+
+
+@router.get("/{project_id}/profile", response_model=CompanyIntelligenceProfile | None)
+def get_profile(
+    project_id: str, session: Session = Depends(get_session)
+) -> CompanyIntelligenceProfile | None:
+    """The structured company profile (identity, peers, signals). Null until
+    research with an LLM runs."""
+    row = session.get(ProjectRow, project_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="project not found")
+    stored = row.payload.get("profile")
+    return CompanyIntelligenceProfile.model_validate(stored) if stored else None

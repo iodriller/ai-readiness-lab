@@ -86,6 +86,9 @@ export type PeerTaxonomy1 = number;
 export type AiSignals = number;
 export type OpportunityHypotheses1 = number;
 export type Sources = string[];
+export type Company1 = string;
+export type Reason = string;
+export type Confidence3 = number;
 export type Name1 = string;
 export type Category = string;
 export type ExecutiveSummary = string;
@@ -115,6 +118,11 @@ export type CompetitivePressure1 = string;
 export type TheOpening = string;
 export type RecommendedNextMove = string;
 export type Opportunities = OpportunityCard[];
+export type Url1 = string;
+export type Title1 = string;
+export type SourceType1 = string;
+export type Confidence4 = number;
+export type Sources1 = BriefSource[];
 
 export interface AIReadinessLabModels {
   Project?: Project;
@@ -122,6 +130,7 @@ export interface AIReadinessLabModels {
   SourceRecord?: SourceRecord;
   CompanyIntelligenceProfile?: CompanyIntelligenceProfile;
   CompetitiveSignal?: CompetitiveSignal;
+  PeerClassification?: PeerClassification;
   OpportunityCard?: OpportunityCard;
   ReadinessScorecard?: ReadinessScorecard;
   CreateProjectRequest?: CreateProjectRequest;
@@ -229,6 +238,18 @@ export interface ProfileConfidence {
   ai_signals?: AiSignals;
   opportunity_hypotheses?: OpportunityHypotheses1;
 }
+/**
+ * A subject↔peer relationship with a stated, reviewable reason (spec §3.3).
+ *
+ * The `reason` is mandatory: a label without an explanation is what makes bad
+ * comparisons hard to catch. A wrong `peer_type` is a correctness bug.
+ */
+export interface PeerClassification {
+  company: Company1;
+  peer_type: PeerType;
+  reason: Reason;
+  confidence?: Confidence3;
+}
 export interface OpportunityCard {
   name: Name1;
   category: Category;
@@ -280,4 +301,14 @@ export interface BriefResponse {
   the_opening: TheOpening;
   recommended_next_move: RecommendedNextMove;
   opportunities: Opportunities;
+  sources?: Sources1;
+}
+/**
+ * A credibility-tagged public source backing the brief (the Evidence panel).
+ */
+export interface BriefSource {
+  url: Url1;
+  title?: Title1;
+  source_type: SourceType1;
+  confidence: Confidence4;
 }

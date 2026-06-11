@@ -2,7 +2,12 @@
 
 from app.models.base import SourceType
 from app.research.providers import SearchResult
-from app.research.source_ranker import classify_and_rank, classify_source_type, confidence_for
+from app.research.source_ranker import (
+    classify_and_rank,
+    classify_source_type,
+    confidence_for,
+    resolve_company_domain,
+)
 
 
 def test_sec_gov_classified_as_filing():
@@ -68,3 +73,28 @@ def test_classify_and_rank_skips_empty_urls():
     ]
     ranked = classify_and_rank(results)
     assert len(ranked) == 1
+
+
+# --- company-domain resolution (Gap 1: official-site classification) -----------
+def test_resolve_company_domain_matches_name_to_domain():
+    results = [
+        SearchResult(url="https://en.wikipedia.org/wiki/Salesforce", title="Wiki", snippet=""),
+        SearchResult(url="https://www.salesforce.com/products", title="Salesforce", snippet=""),
+    ]
+    assert resolve_company_domain("Salesforce", results) == "salesforce.com"
+
+
+def test_resolve_company_domain_avoids_unrelated_same_word_site():
+    # "Occidental" appears in an unrelated restaurant domain — must NOT match it.
+    results = [
+        SearchResult(url="https://theoccidentaldc.com/", title="Restaurant", snippet=""),
+        SearchResult(url="https://www.merriam-webster.com/x", title="Dict", snippet=""),
+    ]
+    assert resolve_company_domain("Occidental Petroleum", results) == ""
+
+
+def test_resolved_domain_makes_official_site_classify_as_official():
+    results = [SearchResult(url="https://www.salesforce.com/ai", title="Salesforce", snippet="")]
+    domain = resolve_company_domain("Salesforce", results)
+    ranked = classify_and_rank(results, company_domain=domain)
+    assert ranked[0].source_type == SourceType.official

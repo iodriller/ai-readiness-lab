@@ -116,6 +116,29 @@ def test_research_stream_emits_source_and_interim_events(client, monkeypatch):
     assert source["source_type"] == "news"
 
 
+def test_brief_persists_evidence_sources_after_stream(client, monkeypatch):
+    class _FakeProvider:
+        def search(self, query, max_results=5):
+            from app.research.providers import SearchResult
+
+            return [SearchResult(url="https://reuters.com/x", title="News X", snippet="...")]
+
+    monkeypatch.setattr(orchestrator, "_create_provider", lambda: _FakeProvider())
+    project_id = _create(client)
+    client.get(f"/projects/{project_id}/research/stream")  # runs the pipeline
+
+    body = client.get(f"/projects/{project_id}/brief").json()
+    assert body["sources"], "evidence sources should be persisted on the brief"
+    assert body["sources"][0]["url"] == "https://reuters.com/x"
+
+
+def test_peers_and_profile_endpoints_default_empty(client):
+    project_id = _create(client)
+    assert client.get(f"/projects/{project_id}/peers").json() == []
+    assert client.get(f"/projects/{project_id}/profile").json() is None
+    assert client.get("/projects/missing/peers").status_code == 404
+
+
 def test_brief_returns_sample_before_stream(client):
     project_id = _create(client)
     response = client.get(f"/projects/{project_id}/brief")

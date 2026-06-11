@@ -10,6 +10,65 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 8 — Gap fixes + Phase 4 (Peer Taxonomy) + Phase 5 (Opportunity Map)
+
+**Done:**
+- **Git identity fix (user-reported):** all prior commits were authored/committed as
+  `Claude <noreply@anthropic.com>`. Set `git config` to `iodriller <oneyerge@gmail.com>`,
+  rewrote the whole branch history to the owner identity, and added the MANDATORY git-identity
+  rule to Repository etiquette above. The GitHub contributor is now the owner, never Claude.
+- **Gap 1 (official-site classification):** `source_ranker.resolve_company_domain()` matches the
+  company's name tokens to a result's domain label (conservative — exact/prefix match, avoids
+  unrelated same-word sites). The orchestrator resolves the domain and re-classifies the evidence
+  set so the company's own site is `official`, not `blog`. Names that don't echo their domain
+  (ticker-style) stay unresolved until the profiler supplies `company_identity.website`.
+- **Gap 2 (evidence persistence):** added `BriefResponse.sources` (`BriefSource[]`); the
+  orchestrator attaches the ranked evidence to the brief and `_store_results` persists it, so
+  `GET /brief` returns the Evidence panel after a reload. Frontend `Brief` prefers `brief.sources`
+  and falls back to the live session sources.
+- **Phase 4 — Peer taxonomy & competitive intelligence:**
+  - `research/peer_classifier.py`: rule-based `classify_peer()` over a curated company→role set
+    (oil&gas operators vs oilfield-services; CRM vendors; cloud/fintech tech vendors; banks). Each
+    verdict is a `PeerClassification {company, peer_type, reason, confidence}`. Unknown companies
+    → low-confidence `adjacent_benchmark` (defer, never guess direct competitor). `to_taxonomy()`
+    buckets them into the profile's `PeerTaxonomy`.
+  - `research/competitive_signals.py`: `reconcile_peer_types()` overrides each signal's peer_type
+    with the classifier's verdict (a service company can never be shown as a direct competitor);
+    `filter_relevant()` drops unsourced/low-confidence signals.
+  - New `PeerClassification` model (exported to TS); `GET /projects/{id}/peers` exposes the
+    explained taxonomy; `GET /projects/{id}/profile` exposes the stored profile.
+- **Phase 5 — AI opportunity map:**
+  - `app/opportunity/data/library.json` (14 curated use cases across the spec §6 categories) +
+    `library.py` loader (`UseCase`).
+  - `opportunity/scorer.py` `score_opportunities(profile, signals)`: keyword fit vs the profile,
+    competitive-pressure bonus from matching peer signals, value/feasibility/risk ranking →
+    5–10 `OpportunityCard`s. **No-hallucination guard:** a card names a peer in
+    `competitive_pressure` ONLY when a real signal backs it; otherwise the text makes no peer claim.
+  - Orchestrator LLM path now builds the corrected taxonomy + vetted signals + ranked cards and
+    feeds the deterministic cards into the brief; profile + peers persisted.
+- **Tests:** backend 79 (peer classifier eval incl. the Oxy/SLB spec example, competitive-signal
+  hygiene, opportunity scorer + guard, domain-resolver, peers/profile endpoints, evidence
+  persistence); frontend 9. Ruff/ESLint/tsc/Vite build all clean.
+
+**Gaps / bugs found:**
+- The peer classifier is a curated set; companies outside it defer to `adjacent_benchmark`. When
+  the LLM path runs, unknown peers keep the model's label — acceptable, but expanding the curated
+  set (or an LLM-assisted classify with a reason) would raise coverage.
+- Phase 4/5 enrichment only populates live when `ANTHROPIC_API_KEY` is set (needs a profile). The
+  deterministic engines are fully unit-tested regardless; the no-key demo still streams real
+  DuckDuckGo evidence + a sample brief.
+- Local server smoke test couldn't run this turn (sandbox SIGTERMs long-running uvicorn, exit
+  144); relied on the in-process API tests instead. Live DDG streaming was verified in Session 7.
+
+**What's left:** Phase 6 — Open-Ended Strategy Q&A (the follow-up chat on the brief), then Phase 7+
+(guided intake, readiness scoring, technical bridge, report generator).
+
+**Next step (Phase 6 — Strategy Q&A):** question classifier → context retriever (profile + peer
+signals + opportunity library) → structured answer composer → wire into a chat surface on the
+project. See `docs/IMPLEMENTATION_PLAN.md` Phase 6.
+
+---
+
 ### 2026-06-11 · Session 7 — Phase 3.5: Streaming Research Console (AI Elements)
 
 **Done:**
@@ -365,7 +424,12 @@ npm test                           # vitest run
 ## Repository etiquette
 
 - Working branch: `claude/claude-md-best-practices-b31l7x`.
-- Commit messages: imperative mood, no "Claude" branding — author as the repo owner.
+- **Git identity (MANDATORY):** every commit MUST be authored AND committed as the repo
+  owner — `git config user.name "iodriller"` and `git config user.email "oneyerge@gmail.com"`.
+  NEVER commit as `Claude <noreply@anthropic.com>` or any Anthropic identity. The contributor
+  shown on GitHub must be the owner, not Claude. Verify with `git log --format='%an <%ae>'`
+  before pushing; if any commit on the branch shows Claude as author/committer, rewrite it.
+- Commit messages: imperative mood, no "Claude" branding in the title or body.
 - Do not create a pull request unless explicitly asked.
 - Keep `docs/PRODUCT_SPEC.md` (vision) and `docs/IMPLEMENTATION_PLAN.md` (execution) in sync
   with real decisions as they are made.

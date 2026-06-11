@@ -18,3 +18,16 @@ class CompetitiveSignal(BaseModel):
     fomo_strength: Level
     source_ids: list[str] = Field(default_factory=list)
     confidence: Confidence
+
+
+class PeerClassification(BaseModel):
+    """A subject↔peer relationship with a stated, reviewable reason (spec §3.3).
+
+    The `reason` is mandatory: a label without an explanation is what makes bad
+    comparisons hard to catch. A wrong `peer_type` is a correctness bug.
+    """
+
+    company: str
+    peer_type: PeerType
+    reason: str
+    confidence: Confidence = 0.0

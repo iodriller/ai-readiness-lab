@@ -12,6 +12,15 @@ class CreateProjectRequest(BaseModel):
     mode: Mode
 
 
+class BriefSource(BaseModel):
+    """A credibility-tagged public source backing the brief (the Evidence panel)."""
+
+    url: str
+    title: str = ""
+    source_type: str
+    confidence: float
+
+
 class BriefResponse(BaseModel):
     """Executive AI Readiness Brief (spec §4.4).
 
@@ -27,3 +36,4 @@ class BriefResponse(BaseModel):
     the_opening: str
     recommended_next_move: str
     opportunities: list[OpportunityCard]
+    sources: list[BriefSource] = Field(default_factory=list)

@@ -8,7 +8,7 @@ For the "what" and "why" — product vision, modes, and design — see docs/PROD
 
 # AI Readiness Lab — Implementation Plan
 
-**Status:** Phases 0–3 complete (scaffold, domain contracts, executive shell, research orchestrator); Phase 4 next
+**Status:** Phases 0–5 complete (scaffold, domain contracts, executive shell, research orchestrator, streaming console, peer taxonomy, opportunity map); Phase 6 (Strategy Q&A) next
 **Last updated:** 2026-06-11
 **Owner branch:** `claude/claude-md-best-practices-b31l7x`
 **Companion docs:** `docs/PRODUCT_SPEC.md` (vision), `docs/ARCHITECTURE.md` (flow diagrams), `CLAUDE.md` (agent working rules)
@@ -326,6 +326,12 @@ is never surfaced as a direct operator competitor.
 **Risks.** Industry edge cases → keep the reason field and let it be reviewable; expand eval set.
 **Depends on.** Phase 3.
 
+**Status (2026-06-11): COMPLETE.** `research/peer_classifier.py` (curated company→role rules,
+`PeerClassification` with a stated reason, low-confidence `adjacent_benchmark` for unknowns);
+`research/competitive_signals.py` (peer-type reconciliation + relevance filter);
+`GET /projects/{id}/peers` + `/profile`. Eval asserts the spec's Oxy/SLB example. The official-site
+classification refinement from Phase 3.5 is also fixed (`resolve_company_domain`).
+
 ---
 
 ### Phase 5 — AI Opportunity Map  · _Size: M_
@@ -347,6 +353,11 @@ rejects any card whose competitive_pressure text lacks a backing signal/source.
 **Acceptance.** For a researched company, the app emits 5–10 cards with credible "why now" text
 tied to evidence. **Risks.** Generic cards → require company-specific hooks in each summary.
 **Depends on.** Phases 3–4.
+
+**Status (2026-06-11): COMPLETE.** `app/opportunity/data/library.json` (14 use cases across the
+§6 categories) + `library.py` loader; `opportunity/scorer.py` ranks 5–10 cards by profile fit +
+competitive pressure + value/feasibility/risk. No-hallucination guard: a card names a peer only
+when a real signal backs it. Wired into the orchestrator's LLM path (cards fed into the brief).
 
 ---
 

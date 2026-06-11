@@ -123,4 +123,4 @@ def test_financials_default_to_none_not_guesses():
 
 
 def test_all_top_level_models_are_exported():
-    assert len(TOP_LEVEL_MODELS) == 7
+    assert len(TOP_LEVEL_MODELS) == 8

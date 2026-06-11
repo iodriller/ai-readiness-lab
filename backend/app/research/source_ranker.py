@@ -67,6 +67,56 @@ def confidence_for(source_type: SourceType) -> float:
     return _SOURCE_CONFIDENCE.get(source_type, 0.40)
 
 
+_NAME_SUFFIXES = {
+    "inc",
+    "corp",
+    "corporation",
+    "co",
+    "company",
+    "ltd",
+    "limited",
+    "plc",
+    "llc",
+    "group",
+    "holdings",
+    "the",
+}
+
+
+def _name_tokens(company_name: str) -> set[str]:
+    raw = re.split(r"[^a-z0-9]+", company_name.lower())
+    return {t for t in raw if t and t not in _NAME_SUFFIXES and len(t) >= 3}
+
+
+def _domain_label(url: str) -> str:
+    netloc = urlparse(url).netloc.lower().removeprefix("www.")
+    parts = netloc.split(".")
+    return parts[-2] if len(parts) >= 2 else netloc
+
+
+def resolve_company_domain(company_name: str, results: list[SearchResult]) -> str:
+    """Best-effort official-domain resolution.
+
+    Matches the company's name tokens against each result's second-level domain
+    label and returns the netloc (e.g. ``salesforce.com``) on a confident match,
+    else ``""``. Conservative on purpose — a wrong match would mislabel a source as
+    official, so we require an exact or prefix token match (avoids e.g. a same-word
+    unrelated site). Names that don't echo their domain (a ticker-style site) stay
+    unresolved until the profiler supplies ``company_identity.website``.
+    """
+    tokens = _name_tokens(company_name)
+    for r in results:
+        label = _domain_label(r.url)
+        if not label:
+            continue
+        for token in tokens:
+            if label == token or (
+                len(label) >= 5 and (label.startswith(token) or token.startswith(label))
+            ):
+                return urlparse(r.url).netloc.lower().removeprefix("www.")
+    return ""
+
+
 def classify_and_rank(results: list[SearchResult], company_domain: str = "") -> list[SearchResult]:
     """Classify source types, deduplicate by URL, and sort by confidence descending."""
     seen: set[str] = set()

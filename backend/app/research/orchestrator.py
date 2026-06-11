@@ -91,8 +91,25 @@ def _research_budget() -> tuple[int, int]:
     return s.research_max_sources, s.research_timeout_seconds
 
 
-def _store_brief(project_id: str, brief: BriefResponse | None) -> None:
-    """Flip status to ready and persist brief (if available) in ProjectRow.payload."""
+def _brief_sources(sources, limit: int = 15) -> list:
+    """Build the brief's Evidence panel from the ranked sources (top `limit`)."""
+    from app.api.schemas import BriefSource
+    from app.research.source_ranker import confidence_for
+
+    return [
+        BriefSource(
+            url=r.url,
+            title=r.title,
+            source_type=r.source_type.value,
+            confidence=round(confidence_for(r.source_type), 2),
+        )
+        for r in sources[:limit]
+    ]
+
+
+def _store_results(project_id, brief, profile=None, classifications=None) -> None:
+    """Flip status to ready and persist the brief (incl. evidence), plus the profile
+    and peer classifications when available, in ProjectRow.payload."""
     with SessionLocal() as session:
         row = session.get(ProjectRow, project_id)
         if row is None:
@@ -101,8 +118,41 @@ def _store_brief(project_id: str, brief: BriefResponse | None) -> None:
         payload = {**row.payload, "status": ProjectStatus.ready.value}
         if brief is not None:
             payload["brief"] = json.loads(brief.model_dump_json())
+        if profile is not None:
+            payload["profile"] = json.loads(profile.model_dump_json())
+        if classifications is not None:
+            payload["peers"] = [json.loads(c.model_dump_json()) for c in classifications]
         row.payload = payload
         session.commit()
+
+
+def _build_intelligence(subject: str, profile):
+    """Phase 4+5: correct peer taxonomy, vet competitive signals, rank opportunities.
+
+    Returns (enriched_profile, peer_classifications, opportunity_cards).
+    """
+    from app.opportunity.scorer import score_opportunities
+    from app.research.competitive_signals import filter_relevant, reconcile_peer_types
+    from app.research.peer_classifier import classify_peers, to_taxonomy
+
+    tax = profile.peer_taxonomy
+    candidates = list(
+        dict.fromkeys(
+            tax.direct_competitors
+            + tax.operator_peers
+            + tax.service_company_benchmarks
+            + tax.technology_vendor_benchmarks
+            + tax.adjacent_industry_benchmarks
+            + [s.company for s in profile.competitive_ai_signals]
+        )
+    )
+    classifications = classify_peers(subject, candidates)
+    signals = filter_relevant(reconcile_peer_types(subject, profile.competitive_ai_signals))
+    profile = profile.model_copy(
+        update={"peer_taxonomy": to_taxonomy(classifications), "competitive_ai_signals": signals}
+    )
+    cards = score_opportunities(profile, signals)
+    return profile, classifications, cards
 
 
 async def run(project_id: str, company_name: str, mode: Mode) -> AsyncGenerator[dict, None]:
@@ -136,12 +186,16 @@ async def run(project_id: str, company_name: str, mode: Mode) -> AsyncGenerator[
     yield _step_event(5, total, RESEARCH_STEPS[4])
     yield _step_event(6, total, RESEARCH_STEPS[5])
 
-    # Re-rank across all batches so the top sources go to the LLM first.
-    from app.research.source_ranker import classify_and_rank
+    # Re-rank across all batches; resolve the company's own domain so its official
+    # site is labeled correctly (not as a blog) in the evidence set.
+    from app.research.source_ranker import classify_and_rank, resolve_company_domain
 
-    sources = classify_and_rank(sources)
+    domain = resolve_company_domain(company_name, sources)
+    sources = classify_and_rank(sources, company_domain=domain)
 
-    # LLM profiling and brief generation.
+    # LLM profiling, peer/opportunity enrichment, and brief generation.
+    profile = None
+    classifications = None
     if llm is not None and sources:
         try:
             from app.research.brief_generator import generate_brief
@@ -149,20 +203,27 @@ async def run(project_id: str, company_name: str, mode: Mode) -> AsyncGenerator[
 
             yield _interim_event("Analyzing evidence with Claude", "Extracting a company profile")
             profile = await asyncio.to_thread(profile_company, company_name, sources[:20], llm)
+            profile, classifications, cards = _build_intelligence(company_name, profile)
             yield _step_event(7, total, RESEARCH_STEPS[6])
             brief = await asyncio.to_thread(generate_brief, profile, llm)
+            if cards:
+                brief = brief.model_copy(update={"opportunities": cards})
         except Exception:
             log.warning(
                 "LLM phase failed for project=%r; using sample brief", project_id, exc_info=True
             )
+            profile = classifications = None
             yield _step_event(7, total, RESEARCH_STEPS[6])
             brief = sample_brief(company_name)
     else:
         yield _step_event(7, total, RESEARCH_STEPS[6])
         brief = sample_brief(company_name)
 
+    # Attach the real evidence set to the brief so it survives a reload.
+    brief = brief.model_copy(update={"sources": _brief_sources(sources)})
+
     yield _step_event(8, total, RESEARCH_STEPS[7])
-    await asyncio.to_thread(_store_brief, project_id, brief)
+    await asyncio.to_thread(_store_results, project_id, brief, profile, classifications)
     yield _done_event()
 
 
@@ -213,5 +274,5 @@ async def _mock_run(project_id: str, company_name: str) -> AsyncGenerator[dict, 
     for i, label in enumerate(RESEARCH_STEPS, start=1):
         await asyncio.sleep(STEP_DELAY_SECONDS)
         yield _step_event(i, total, label)
-    await asyncio.to_thread(_store_brief, project_id, sample_brief(company_name))
+    await asyncio.to_thread(_store_results, project_id, sample_brief(company_name))
     yield _done_event()
