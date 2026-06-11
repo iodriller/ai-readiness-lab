@@ -1,7 +1,9 @@
-import type { BriefResponse, SourceEvent } from '../api/client'
+import { useState } from 'react'
+import type { BriefResponse, OpportunityCard, SourceEvent } from '../api/client'
 import { Sources } from './ai/Sources'
 import type { SourceLike } from './ai/Sources'
 import OpportunityCardView from './OpportunityCardView'
+import PilotDrillDown from './PilotDrillDown'
 import QAPanel from './QAPanel'
 import ReportPreview from './ReportPreview'
 
@@ -14,6 +16,7 @@ export default function Brief({
   projectId: string
   sources?: SourceEvent[]
 }) {
+  const [selected, setSelected] = useState<OpportunityCard | null>(null)
   // Prefer the evidence persisted on the brief (survives reload); fall back to the
   // sources collected live during this session.
   const evidence: SourceLike[] = brief.sources?.length ? brief.sources : sources
@@ -43,9 +46,16 @@ export default function Brief({
         <h2>Recommended opportunities</h2>
         <div className="opportunity-grid">
           {brief.opportunities.map((card) => (
-            <OpportunityCardView key={card.name} card={card} />
+            <OpportunityCardView key={card.name} card={card} onPlan={setSelected} />
           ))}
         </div>
+        {selected && (
+          <PilotDrillDown
+            projectId={projectId}
+            card={selected}
+            onClose={() => setSelected(null)}
+          />
+        )}
       </section>
 
       {evidence.length > 0 && (
