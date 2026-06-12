@@ -9,10 +9,12 @@ export default function PilotDrillDown({
   projectId,
   card,
   onClose,
+  onPlanned,
 }: {
   projectId: string
   card: OpportunityCard
   onClose: () => void
+  onPlanned?: (plan: PilotPlan) => void
 }) {
   const [questions, setQuestions] = useState<PilotQuestion[]>([])
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -30,7 +32,9 @@ export default function PilotDrillDown({
     setBusy(true)
     setError(null)
     try {
-      setPlan(await submitPilot(projectId, card.name, answers))
+      const result = await submitPilot(projectId, card.name, answers)
+      setPlan(result)
+      onPlanned?.(result)
     } catch {
       setError('Could not build the pilot plan.')
     } finally {

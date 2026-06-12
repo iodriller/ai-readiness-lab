@@ -12,6 +12,8 @@ vi.mock('../api/client', () => ({
   getBrief: (...args: unknown[]) => getBrief(...args),
   // Brief → ReportPreview builds download URLs from this.
   reportUrl: (id: string, fmt: string) => `/projects/${id}/report.${fmt}`,
+  // Brief fetches any saved pilot plan on mount.
+  getPilot: () => Promise.resolve(null),
 }))
 
 afterEach(() => vi.clearAllMocks())
