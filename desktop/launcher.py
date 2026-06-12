@@ -139,14 +139,53 @@ def main() -> None:
         _open_in_browser(port)
         return
 
-    webview.create_window(
+    real_url = f"http://{HOST}:{port}"
+    # Splash page shown for the ~1 s while the server starts. Once the health
+    # check passes we navigate immediately, so this is almost never visible — but
+    # it prevents the blank-window flash on slower machines.
+    splash_html = """<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body{margin:0;background:#0f1e3c;display:flex;align-items:center;
+       justify-content:center;height:100vh;font-family:system-ui,sans-serif}
+  .wrap{text-align:center}
+  h1{color:#fff;font-size:1.6rem;margin:0 0 .4rem}
+  p{color:#6480c8;font-size:.9rem;margin:0}
+  .dot{animation:pulse 1.2s ease-in-out infinite}
+  .dot:nth-child(2){animation-delay:.2s}
+  .dot:nth-child(3){animation-delay:.4s}
+  @keyframes pulse{0%,100%{opacity:.2}50%{opacity:1}}
+  .dots{display:inline-flex;gap:5px;margin-top:.8rem}
+  span.d{width:8px;height:8px;border-radius:50%;background:#3b82f6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AI Readiness Lab</h1>
+  <p>Starting&hellip;</p>
+  <div class="dots">
+    <span class="d dot"></span>
+    <span class="d dot"></span>
+    <span class="d dot"></span>
+  </div>
+</div>
+</body>
+</html>"""
+
+    window = webview.create_window(
         WINDOW_TITLE,
-        url=f"http://{HOST}:{port}",
+        html=splash_html,
         width=1280,
         height=860,
         min_size=(900, 640),
     )
-    webview.start()
+
+    def _navigate() -> None:
+        window.load_url(real_url)
+
+    webview.start(func=_navigate)
 
 
 if __name__ == "__main__":
