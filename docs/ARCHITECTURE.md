@@ -8,118 +8,137 @@ docs/PRODUCT_SPEC.md (what/why).
 
 # AI Readiness Lab — Architecture & Flow
 
-**Last updated:** 2026-06-11
+**Last updated:** 2026-06-12
 
-This document maps the complete flow in two views, as requested for onboarding and
-design review:
+This document maps the complete, shipped system in four views:
 
-1. **Technical flow** — the request/streaming pipeline from intake to a cited brief.
-2. **User journey** — what a C-level user sees and does, screen by screen.
-
-A third **streaming sequence** diagram details the live "show your work" protocol.
+1. **Technical pipeline** — intake → research → brief → pilot → export.
+2. **User journey** — what a C-level user sees, screen by screen.
+3. **Streaming "show your work"** — the SSE event contract in detail.
+4. **Desktop app packaging** — how the app is bundled and delivered.
 
 ---
 
-## Key design decisions captured here
+## Key design decisions
 
 | Area | Decision | Rationale |
 | --- | --- | --- |
-| Frontend UI kit | **AI Elements (shadcn/ui)** — copy-paste React components we own in-repo (Conversation, Message, Reasoning, Tool, Task, Sources) | Don't reinvent the wheel; maximum extensibility since the code lives in our repo; first-class streaming + tool/step + citation primitives. Built on Radix + Tailwind, works with Vite. |
-| Web search | **DuckDuckGo by default** (free, open-source, no API key). Tavily / Serper are opt-in upgrades when a key is set. | Research works out of the box with zero secrets; richer providers are a one-env-var swap. |
-| Research budget | Every run is **bounded: ≤ 100 sources and ≤ 10 minutes** (`RESEARCH_MAX_SOURCES`, `RESEARCH_TIMEOUT_SECONDS`). | Deep research must terminate; on a budget hit we synthesize from evidence gathered so far rather than hanging. |
-| Progress UX | **Streaming** via SSE — the UI shows live status and interim findings; it never sits silent while work runs. | Executives must see "what the agent is doing" — gathering financials, scanning competitors, etc. |
-| Evidence | Ranked sources accumulate into a **JSON evidence set** (`SourceRecord`s with `source_type` + `confidence`) before any synthesis. | Every claim must trace to a cited source; synthesis reads only validated evidence. |
+| Frontend UI kit | **AI Elements (shadcn/ui)** — copy-paste React components owned in-repo | Maximum extensibility; native streaming/step/citation primitives; built on Radix + Tailwind. |
+| Web search | **DuckDuckGo by default** (no API key). Tavily / Serper opt-in via env key. | Works out of the box; richer providers are a one-env-var swap. |
+| Research budget | **≤ 100 sources · ≤ 10 minutes** (`RESEARCH_MAX_SOURCES`, `RESEARCH_TIMEOUT_SECONDS`) | Deep research must terminate; synthesizes from evidence gathered so far on budget hit. |
+| Progress UX | **Streaming via SSE** — live step labels, interim findings, and source counter | Executives must see "what the agent is doing" — never a silent spinner. |
+| Peer classification | **Rule-based curated dict → reason string** | Explicit, auditable; unknown companies defer to `adjacent_benchmark` rather than guessing. |
+| Pilot scoring | **Deterministic rubric** — identical inputs always yield identical scores | Verifiable; no LLM needed; works offline; fast. |
+| API key | **OS keychain** (`keyring`) with 0600-file fallback; only `…last4` hint returned to UI | Compliant with Anthropic's policy (BYOK, no OAuth); secure by default. |
+| Desktop packaging | **PyInstaller + pywebview** — single `.app`/`.exe`, no Python install required | One double-click for a non-technical executive. |
+| Reports | **fpdf2 + Liberation Sans TTF** — cover page, section numbering, native Unicode | Board-ready PDF; em-dashes, curly quotes, and arrows render natively. |
+| LLM | **Claude `claude-opus-4-8`** for company profiling and brief generation | Best reasoning available; structured JSON output validated by Pydantic + repair loop. |
 
 ---
 
-## 1. Technical flow
+## 1. Complete technical pipeline
 
 ```mermaid
 flowchart TD
-    subgraph Client["Browser — React + Vite + AI Elements (shadcn/ui)"]
-        Intake["Intake screen<br/>company · role · mode"]
-        Console["Streaming research console<br/>live status · interim findings · source counter"]
-        Brief["Executive brief<br/>opportunity cards · readiness gauge · citations"]
+    subgraph Input
+        Intake["Intake screen\ncompany · role · mode"]
     end
 
-    subgraph API["FastAPI backend"]
-        Create["POST /projects<br/>create + persist"]
-        Stream["GET /projects/:id/research/stream<br/>SSE"]
-        BriefEP["GET /projects/:id/brief"]
+    subgraph Backend["FastAPI backend (Python 3.11)"]
+        direction TB
+        Create["POST /projects\ncreate row + SQLite"]
+        Stream["GET /:id/research/stream\nSSE orchestrator"]
+        BriefEP["GET /:id/brief"]
+        QA["POST /:id/qa\nQ&A endpoint"]
+        PilotQ["GET /:id/pilot/questions"]
+        PilotPost["POST /:id/pilot\npersist PilotPlan"]
+        ReportMD["GET /:id/report.md"]
+        ReportPDF["GET /:id/report.pdf"]
     end
 
-    subgraph Orch["Research Orchestrator (async)"]
-        Plan["Query planner<br/>7 buckets + mode-specific extras"]
-        Search["Parallel web search"]
-        Budget{"Budget guard<br/>≤ 100 sources · ≤ 10 min"}
-        Rank["Source ranker<br/>classify · dedupe · confidence"]
-        Evidence[("Evidence set<br/>ranked SourceRecords as JSON")]
-        Profile["Company profiler — Claude<br/>schema + repair loop"]
-        Gen["Brief generator — Claude<br/>schema + repair loop"]
+    subgraph Orch["Research Orchestrator"]
+        Plan["Query planner\n7 buckets + mode extras"]
+        Search["Parallel DuckDuckGo\n(Tavily/Serper if keyed)"]
+        Budget{"Budget guard\n≤100 src · ≤10 min"}
+        Rank["Source ranker\nclassify · dedupe · confidence"]
+        Evidence[("Evidence JSON\nSourceRecord list")]
+        Profiler["Company profiler\nClaude + repair loop"]
+        PeerClass["Peer classifier\ncurated dict → reason"]
+        OppScore["Opportunity scorer\ncurated library · no-hallucination guard"]
+        BriefGen["Brief generator\nClaude + repair loop"]
     end
 
-    subgraph Ext["External services"]
-        DDG["DuckDuckGo (default)<br/>Tavily / Serper if key set"]
-        Claude["Claude claude-opus-4-8"]
+    subgraph QAPkg["Q&A package"]
+        QAClass["Question classifier\n5 rule-based types"]
+        QARetriever["Context retriever\nprofile + signals + history"]
+        QACompose["Answer composer\nClaude · 9-field StructuredAnswer"]
     end
 
-    DB[("SQLite<br/>projects · sources · profile · brief")]
+    subgraph PilotPkg["Pilot package"]
+        PilotQPkg["7 executive questions\n+ platform-aware checklist"]
+        Scorer["Deterministic scorer\n8 dimensions · rubric-based"]
+    end
 
-    Intake -->|submit| Create --> DB
-    Intake -->|navigate| Console
-    Console -->|open SSE| Stream --> Plan
+    subgraph Report["Report generator"]
+        MD["render_markdown()\nfull Unicode"]
+        PDF["render_pdf()\ncover page · §sections\nLiberation Sans TTF"]
+    end
+
+    DB[("SQLite\nprojects · profile · brief\npilot · qa_history")]
+
+    Intake -->|POST| Create --> DB
+    Intake -->|open SSE| Stream --> Plan
     Plan --> Search --> Budget
-    Budget -->|within budget| DDG
-    DDG --> Rank
-    Budget -->|limit hit| Rank
-    Rank --> Evidence --> Profile --> Claude
-    Profile --> Gen --> Claude
-    Gen --> DB
-    Stream -. "step + interim findings (SSE)" .-> Console
-    Console -->|on done| BriefEP --> DB
-    BriefEP --> Brief
-
-    Claude -. "no ANTHROPIC_API_KEY ⇒ graceful sample brief" .-> Gen
+    Budget -->|within budget| Search
+    Budget -->|limit| Rank
+    Search --> Rank --> Evidence
+    Evidence --> Profiler --> PeerClass --> OppScore --> BriefGen
+    BriefGen --> DB
+    Stream -. "step + interim + source events (SSE)" .-> Intake
+    BriefEP --> DB --> BriefEP
+    QA --> QAClass --> QARetriever --> QACompose
+    QARetriever --> DB
+    QACompose --> DB
+    PilotQ --> PilotQPkg
+    PilotPost --> Scorer --> DB
+    ReportMD --> MD
+    ReportPDF --> PDF
+    MD --> DB
+    PDF --> DB
 ```
 
-**Notes**
-
-- **Graceful degradation.** No `ANTHROPIC_API_KEY` → search still runs (DuckDuckGo), but
-  synthesis is skipped and a clearly-flagged `is_sample` brief is returned. No keys at all
-  and DuckDuckGo unavailable → the mock path fires the same paced steps so the demo always works.
-- **Validate at the boundary.** Both Claude calls pass through the Pydantic schema + repair loop;
-  raw model JSON never reaches the UI or DB.
-
 ---
 
-## 2. User journey (what the executive sees)
+## 2. User journey
 
 ```mermaid
 flowchart TD
-    A["1 · Landing<br/>'Tell us your company and role'<br/>company name · role · what do you want to do"]
-    B["2 · Start review<br/>one click — no model / infra settings"]
-    C["3 · Live research console<br/>animated steps: 'Gathering financials…'<br/>source counter · interim findings stream in"]
-    D{"Research complete<br/>bounded ≤ 10 min"}
-    E["4 · Executive brief<br/>VISUALS: opportunity cards with value / feasibility / risk badges<br/>readiness gauge · competitive-pressure view · cited sources"]
-    F["5 · Drill down<br/>open a card → why now · first step · evidence + confidence"]
-    G["6 · Ask a follow-up<br/>chat: 'What about our supply chain?'<br/>streamed, source-grounded answer"]
-    H["7 · Export<br/>source-cited PDF / Markdown report"]
+    A["1 · Landing\nCompany name · role · intent\nSettings panel: live/sample badge\nRecent reviews list"]
+    B["2 · Live research console\nAnimated steps\nInterim findings stream in\nSource counter grows live"]
+    C{"Research complete\nbounded ≤ 10 min"}
+    D["3 · Executive brief\nReadiness banner with gauge\n2-col opportunity cards\n(value / feasibility / risk badges)\nEvidence panel with citations"]
+    E["4 · Pilot drill-down\n7 plain-English executive questions\nDeterministic readiness scorecard\nDimension bars · recommendation badge\nStrengths / blockers / next actions\nTechnical leader checklist"]
+    F["5 · Strategy Q&A\nFree-form question on the brief\n9-field structured answer:\nwhy it matters · peer signals\npilot options · data needed\nrisks to control · technical questions"]
+    G["6 · Export\nDownload PDF (cover page · §sections)\nDownload Markdown\nFull pilot scorecard + Q&A included"]
+    H["7 · Return home\nBrief saved; recent reviews list\nResume any prior project from history"]
 
-    A --> B --> C --> D
-    D -->|streamed done| E
-    E --> F
+    A -->|Start review| B --> C -->|done event| D
+    D -->|Plan this pilot| E
+    D -->|Ask a question| F
+    F -->|follow-up| F
     E --> G
-    G -->|refine / new angle| C
-    F --> H
-    E --> H
+    D --> G
+    G --> H
+    H -->|click prior review| D
 ```
 
 **Principles**
 
-- The user gives **two facts** (company, role) plus an intent, and never touches a technical knob.
-- The console is **never silent** — status and interim findings stream the whole time.
-- The payoff is **visual, not a wall of text** — cards, badges, a readiness gauge, and citations.
-- Every screen offers a **next move**: drill into evidence, ask a follow-up, or export.
+- **Two facts to start:** company name + role. No model pickers, no infra config.
+- **Never silent:** status + interim findings stream the whole time research runs.
+- **Visual, not a wall of text:** cards, coloured badges, a circular readiness gauge, and a cited evidence panel.
+- **Every screen has a next move:** drill into evidence, plan a pilot, ask a follow-up, or export.
+- **Persistent:** every brief survives a window close; the landing screen links to all prior projects.
 
 ---
 
@@ -132,34 +151,84 @@ sequenceDiagram
     participant API as FastAPI /research/stream
     participant ORCH as Orchestrator
     participant DDG as DuckDuckGo
-    participant LLM as Claude
+    participant LLM as Claude (claude-opus-4-8)
 
     U->>UI: company · role · mode
-    UI->>API: open SSE
+    UI->>API: POST /projects → project_id
+    UI->>API: open SSE /projects/:id/research/stream
     API->>ORCH: run(project, company, mode)
-    ORCH-->>UI: step "Identifying company profile"
-    ORCH->>DDG: parallel queries (budget ≤100 src / ≤10 min)
-    DDG-->>ORCH: results
+    ORCH-->>UI: step "Identifying company profile" (1/8)
+    ORCH->>DDG: parallel queries — 7 buckets
+    DDG-->>ORCH: ranked results (budget guard active)
+    ORCH-->>UI: source events (url · title · source_type · confidence)
     ORCH-->>UI: interim "Gathering financial & strategic signals"
     Note over ORCH: rank · dedupe · confidence → evidence JSON
-    ORCH->>LLM: profile from ranked evidence (schema + repair)
+    ORCH-->>UI: step "Classifying competitive landscape" (4/8)
+    Note over ORCH: peer_classifier → PeerTaxonomy
+    Note over ORCH: competitive_signals → filter_relevant()
+    ORCH-->>UI: step "Mapping AI opportunities" (5/8)
+    Note over ORCH: score_opportunities() → OpportunityCard list
+    ORCH->>LLM: company profiler (schema + repair loop)
     LLM-->>ORCH: CompanyIntelligenceProfile JSON
-    ORCH-->>UI: step "Building AI opportunity map"
-    ORCH->>LLM: generate executive brief
+    ORCH->>LLM: brief generator (schema + repair loop)
     LLM-->>ORCH: BriefResponse JSON
-    ORCH->>API: persist brief
-    ORCH-->>UI: done
-    UI->>API: GET /brief
+    ORCH->>API: persist brief + sources + profile
+    ORCH-->>UI: done {}
+    UI->>API: GET /projects/:id/brief
     API-->>UI: brief + cited sources
-    UI-->>U: visuals — cards · gauge · citations
+    UI-->>U: Brief screen — cards · gauge · evidence
 ```
 
-**SSE event contract** (current + planned)
+**SSE event contract**
 
 | Event | Payload | Status |
 | --- | --- | --- |
-| `step` | `{ index, total, label }` — coarse progress | implemented |
-| `interim` | `{ label, detail }` — "gathering X", partial finding | implemented (Phase 3.5) |
-| `source` | `{ url, title, source_type, confidence }` — live source counter | implemented (Phase 3.5) |
-| `done` | `{}` — sentinel; client closes SSE, fetches brief | implemented |
-| `error` | `{ message }` — terminal failure | implemented (client-side) |
+| `step` | `{ index, total, label }` | implemented |
+| `interim` | `{ label, detail }` | implemented |
+| `source` | `{ url, title, source_type, confidence }` | implemented |
+| `done` | `{}` — client closes SSE, fetches brief | implemented |
+| `error` | `{ message }` | implemented (client-side) |
+
+---
+
+## 4. Desktop app packaging
+
+```mermaid
+flowchart LR
+    subgraph Build["Build (GitHub Actions / local)"]
+        FE["npm run build\nfrontend/dist/"]
+        BE["pip install -r requirements.txt"]
+        PyI["pyinstaller\ndesktop/AIReadinessLab.spec"]
+        FE --> PyI
+        BE --> PyI
+    end
+
+    subgraph Bundle["PyInstaller bundle (_internal/)"]
+        RT["Python runtime"]
+        APP["app/ package\n(backend)"]
+        JSON["app/opportunity/data/library.json\n(collect_data_files)"]
+        FONTS["app/fonts/*.ttf\n(collect_data_files)"]
+        DIST["frontend_dist/\n(built SPA)"]
+        Launcher["launcher.py entry point"]
+    end
+
+    subgraph Runtime["At launch"]
+        Splash["Splash HTML in pywebview\n(while server starts)"]
+        Health["wait_until_healthy()\npoll /health"]
+        Window["Native window\n→ navigate to localhost:PORT"]
+    end
+
+    PyI --> Bundle
+    Launcher -->|"start daemon thread"| Uvicorn["uvicorn\nloop=asyncio · http=h11"]
+    Uvicorn --> FastAPI["FastAPI\nserves SPA + API"]
+    Launcher --> Splash --> Health --> Window
+    FastAPI -->|"static mount"| DIST
+```
+
+**Notes**
+
+- `launcher.py` (not `app.py`) avoids shadowing the backend `app` package under PyInstaller.
+- `ensure_writable_db()` moves SQLite to the user config dir when the app is frozen (macOS `.app` bundle is read-only).
+- `_setup_logging()` writes `launch.log` to config dir; redirects `sys.stdout/stderr` (both are `None` in `console=False` builds).
+- The browser fallback (`webbrowser.open`) ensures the app works even without pywebview.
+- Release workflow: `.github/workflows/release.yml` matrix-builds Windows `.zip`, macOS `.dmg`, Linux `.tar.gz` on a `v*` tag.
