@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react'
-import { expect, test } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { expect, test, vi } from 'vitest'
+import * as client from '../api/client'
 import type { BriefResponse } from '../api/client'
 import Brief from './Brief'
 
@@ -27,10 +28,12 @@ const brief: BriefResponse = {
   ],
 }
 
-test('renders the brief title, sample badge, and opportunity cards', () => {
+test('renders the brief title, sample badge, and opportunity cards', async () => {
+  vi.spyOn(client, 'getPilot').mockResolvedValue(null)
   render(<Brief brief={brief} projectId="test-project-id" />)
   expect(screen.getByRole('heading', { name: /ai readiness brief: acme corp/i })).toBeInTheDocument()
   expect(screen.getByText(/sample/i)).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: /enterprise knowledge assistant/i })).toBeInTheDocument()
   expect(screen.getByText(/value: high/i)).toBeInTheDocument()
+  await waitFor(() => expect(client.getPilot).toHaveBeenCalled())
 })
