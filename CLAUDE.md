@@ -10,6 +10,48 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-12 · Session 16 — Report polish, boot splash, architecture diagram
+
+**Done (completed the final polish pass — everything in the "next step" from Session 15):**
+- **PDF cover page:** dark navy background, blue accent bars top/bottom, large company name, date,
+  readiness score badge (only when a `PilotPlan` is present), sample-data notice in amber. Looks
+  like a board document rather than a plain text dump.
+- **§-numbered sections throughout both PDF and Markdown:** §1 Executive Summary, §2 AI Opportunity
+  Map (§2.1…§2.N per card), §3 Selected Pilot, §4 Readiness Scorecard, §5 Technical Leader
+  Questions, §6 Strategy Q&A, §7 Sources & Confidence. Section numbers auto-increment so the PDF
+  and Markdown stay in sync regardless of which sections are present.
+- **Liberation Sans TTF bundled at `backend/app/fonts/`** (Apache/SIL OFL, free): fpdf2 loads it
+  for every PDF, so em-dashes (`—`), curly quotes (`""`), bullets (`•`), arrows (`→`), and
+  ellipses (`…`) render natively without the previous latin-1 replacement hack. PyInstaller's
+  `collect_data_files("app")` already bundles `app/fonts/` — no spec change needed.
+- **Dimension bar chart in the scorecard section** of the PDF: colour-coded bars (green/amber/red
+  by band) for all 8 pilot-readiness dimensions. Mirrors the web UI's `ReadinessScorecardView`.
+- **Generation date header** added to both Markdown and PDF ("Generated June 2026").
+- **Boot splash screen** in `desktop/launcher.py`: pywebview is opened with a dark branded HTML
+  page (animated loading dots) before the server is healthy; `_navigate()` callback switches to
+  the real URL the moment `wait_until_healthy()` returns. Eliminates the blank-window flash.
+- **`docs/ARCHITECTURE.md` rewritten** with four Mermaid diagrams covering the complete shipped
+  system: (1) full technical pipeline from intake through all 8 backend packages to export,
+  (2) user journey all 7 screens, (3) streaming SSE sequence with the full event contract,
+  (4) desktop packaging flow (build → PyInstaller bundle → runtime splash → navigate).
+- **Tests:** 132 backend (5 report tests updated for new section numbering), 22 frontend — all
+  passing. Ruff, ESLint, tsc, Vite build clean. Merged to `main` at `8bcf052`.
+
+**Gaps / bugs found:** None — this was a pure polish/completeness pass.
+
+**What remains:** The product is functionally complete. Remaining nice-to-haves (all lower
+impact than the work completed):
+- App icon (`.icns` / `.ico`) — requires image tooling not available in this sandbox; add via
+  `desktop/icon.png` + PyInstaller `icon=` option on a local machine.
+- Code signing / notarization — macOS Gatekeeper / Windows SmartScreen will warn on unsigned
+  binaries; address when a developer certificate is available.
+- Expand the peer classifier's curated dict for companies outside oil&gas/CRM/fintech/cloud.
+
+**Next step:** product is shippable. Ship a `v1.0.0` tag to trigger the GitHub Actions release
+workflow (`.github/workflows/release.yml`) which builds Windows/macOS/Linux distributables.
+
+---
+
 ### 2026-06-11 · Session 15 — Visual brief polish + readiness gauge
 
 **Done (closed the UI seam — the brief body was still plain CSS while everything below it was Tailwind):**
