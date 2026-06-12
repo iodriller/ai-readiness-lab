@@ -1,5 +1,6 @@
 import type { ReadinessScorecard } from '../api/client'
 import { cn } from '../lib/utils'
+import ReadinessGauge from './ReadinessGauge'
 
 const REC_STYLE: Record<string, string> = {
   proceed: 'bg-green-100 text-green-800',
@@ -19,12 +20,12 @@ export default function ReadinessScorecardView({ scorecard }: { scorecard: Readi
   const dims = scorecard.dimensions as unknown as Record<string, number>
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <ReadinessGauge score={scorecard.overall_score} />
           <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
             Readiness scorecard
           </p>
-          <p className="text-3xl font-semibold text-slate-900">{scorecard.overall_score}/100</p>
         </div>
         <span
           className={cn(

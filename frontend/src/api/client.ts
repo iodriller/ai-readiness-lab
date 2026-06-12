@@ -98,6 +98,10 @@ export function getPilotQuestions(
   )
 }
 
+export function getPilot(projectId: string): Promise<PilotPlan | null> {
+  return getJson<PilotPlan | null>(`/projects/${projectId}/pilot`)
+}
+
 export async function submitPilot(
   projectId: string,
   opportunityName: string,

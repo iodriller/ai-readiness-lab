@@ -10,6 +10,28 @@
 
 ## Session Log (most recent first)
 
+### 2026-06-11 · Session 15 — Visual brief polish + readiness gauge
+
+**Done (closed the UI seam — the brief body was still plain CSS while everything below it was Tailwind):**
+- **`ReadinessGauge`** (new): a circular SVG gauge (ring fills to the score, coloured by band
+  green/amber/red, centre label `NN/100`). Used in `ReadinessScorecardView` (replaces the plain
+  number) and on the brief.
+- **`Brief` restyled to Tailwind** — header + sample chip, a narrative card (the four §4.4
+  sections), a 2-col opportunity grid, evidence/Q&A/report below. On mount it fetches the saved
+  pilot (`GET /projects/{id}/pilot`) and, when present, shows a **readiness banner** at the top
+  (gauge + opportunity name + recommendation). `PilotDrillDown` gained an `onPlanned` callback so
+  the banner updates the moment a plan is built.
+- **`OpportunityCardView` restyled to Tailwind** — card surface, coloured value/feasibility/risk
+  chips, time-to-pilot pill, "Plan this pilot" CTA. (Kept the "Value: high" text the tests assert.)
+- **Client:** added `getPilot(projectId)`.
+- **Tests:** frontend 22 (ReadinessGauge ring/label/clamp; Brief mounts + fetches pilot; existing
+  ProjectScreen/Brief still green). backend 131 unchanged. Ruff, ESLint, tsc, Vite build clean.
+
+**Next:** report polish (cover page, §12.2 section numbering, a Unicode TTF so the PDF keeps
+em-dashes/curly quotes) and first-run desktop polish (icon, splash, signing).
+
+---
+
 ### 2026-06-11 · Session 14 — Phase 7: Guided Pilot Drill-Down (spec §11)
 
 **Done (fully deterministic — no LLM, works in sample mode):**
