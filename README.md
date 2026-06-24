@@ -47,3 +47,18 @@ in-app key setup. See the implementation plan for what's next.
 ## Intended audience
 
 CTOs, CIOs, COOs, CDOs, VPs, transformation leaders, and executive AI sponsors.
+
+## Development & testing
+
+```bash
+cd backend
+pip install -r requirements.txt   # includes pytest and playwright
+pytest                            # run all backend tests
+
+# Playwright browser — one-time download after pip install
+python -m playwright install chromium
+```
+
+The backend test suite includes UI smoke tests that launch the real FastAPI app in a thread
+and drive the frontend in headless Chromium. They skip cleanly if Playwright or its browser
+isn't installed, so a plain `pytest` run works on any fresh checkout.
