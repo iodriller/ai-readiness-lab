@@ -42,7 +42,8 @@ in-app key setup. See the implementation plan for what's next.
   data models, and report structure (the *what* and *why*).
 - **[Implementation Plan](docs/IMPLEMENTATION_PLAN.md)** — phases, steps, acceptance criteria,
   build order, milestones, and risks (the *how* and *when*).
-- **[CLAUDE.md](CLAUDE.md)** — working rules for Claude Code and other AI agents in this repo.
+- **[AGENTS.md](AGENTS.md)** — shared repository guidance for coding agents.
+- **[CLAUDE.md](CLAUDE.md)** — thin Claude Code import of the shared guidance.
 
 ## Intended audience
 

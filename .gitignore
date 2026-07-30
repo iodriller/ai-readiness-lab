@@ -36,5 +36,7 @@ backend/schema.json
 
 # Claude Code local overrides
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+CLAUDE.local.md
 frontend/tsconfig.tsbuildinfo
 frontend/dist/
