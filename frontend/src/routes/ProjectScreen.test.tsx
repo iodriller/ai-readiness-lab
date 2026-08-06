@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { afterEach, expect, test, vi } from 'vitest'
 import type { BriefResponse, ResearchStep } from '../api/client'
 import ProjectScreen from './ProjectScreen'
@@ -20,10 +20,7 @@ afterEach(() => vi.clearAllMocks())
 
 function renderProject() {
   return render(
-    <MemoryRouter
-      initialEntries={['/projects/test-id']}
-      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
-    >
+    <MemoryRouter initialEntries={['/projects/test-id']}>
       <Routes>
         <Route path="/projects/:projectId" element={<ProjectScreen />} />
       </Routes>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { listProjects } from '../api/client'
 import type { ProjectSummary } from '../api/client'
 

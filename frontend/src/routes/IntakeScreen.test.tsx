@@ -1,12 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { afterEach, expect, test, vi } from 'vitest'
 import IntakeScreen from './IntakeScreen'
 
 const navigate = vi.fn()
-vi.mock('react-router-dom', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('react-router-dom')>()),
+vi.mock('react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('react-router')>()),
   useNavigate: () => navigate,
 }))
 
@@ -28,7 +28,7 @@ afterEach(() => {
 
 function renderIntake() {
   return render(
-    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <MemoryRouter>
       <IntakeScreen />
     </MemoryRouter>,
   )

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router'
 import { getBrief, subscribeResearch } from '../api/client'
 import type { BriefResponse, InterimEvent, ResearchStep, SourceEvent } from '../api/client'
 import Brief from '../components/Brief'

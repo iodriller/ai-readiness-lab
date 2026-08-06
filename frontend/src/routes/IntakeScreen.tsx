@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { createProject } from '../api/client'
 import type { CreateProjectRequest } from '../api/client'
 import RecentReviews from '../components/RecentReviews'

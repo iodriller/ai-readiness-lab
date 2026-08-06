@@ -1,12 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter } from 'react-router'
 import { expect, test, vi } from 'vitest'
 import * as client from '../api/client'
 import RecentReviews from './RecentReviews'
 
 function renderWithRouter() {
   return render(
-    <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <MemoryRouter>
       <RecentReviews />
     </MemoryRouter>,
   )
